@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { MapPin, MessageCircle, Trash2, Edit3 } from 'lucide-react'
 import { useState } from 'react'
-import { Memory } from '../types'
+import { Memory, SpaceMember } from '../types'
 
 interface Props {
   memory: Memory
@@ -11,6 +11,8 @@ interface Props {
   onReact: (id: string, emoji: string) => void
   onEdit: (memory: Memory) => void
   onCardClick: (memory: Memory) => void
+  spaceType?: 'personal' | 'group'
+  members?: SpaceMember[]
 }
 
 const reactionEmojis = ['\u2764\uFE0F', '\ud83e\udd7a', '\ud83d\ude02', '\ud83d\ude0d', '\ud83c\udf89', '\ud83d\udd25']
@@ -25,7 +27,7 @@ function getEmojiForTag(tag?: string) {
   return tag ? map[tag] || '\u2728' : '\u2728'
 }
 
-export default function MemoryCard({ memory, index, side, onDelete, onReact, onEdit, onCardClick }: Props) {
+export default function MemoryCard({ memory, index, side, onDelete, onReact, onEdit, onCardClick, spaceType, members }: Props) {
   const [showReactions, setShowReactions] = useState(false)
   const rotation = side === 'left' ? -1.5 : 1.5
 
@@ -83,7 +85,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
 
         <h3 className="font-serif text-xl text-warmDark mb-2 leading-tight">{memory.title}</h3>
 
-        <p className="font-sans text-sm text-warmDark/65 leading-relaxed line-clamp-3">{memory.story}</p>
+<p className="font-sans text-sm text-warmDark/65 leading-relaxed line-clamp-3">{memory.story}</p>
 
         {memory.location && (
           <div className="flex items-center gap-1 mt-3 text-warmDark/50">

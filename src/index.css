@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+.rich-editor:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(74, 55, 40, 0.35);
+  pointer-events: none;
+}
+
+.rich-editor {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rich-editor br {
+  display: block;
+  content: '';
+}
+
 * {
   margin: 0;
   padding: 0;

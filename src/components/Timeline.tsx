@@ -221,15 +221,24 @@ export default function Timeline() {
                 {space.title}
               </h2>
             </div>
-            <div className="relative flex items-center gap-1 text-warmDark/50">
+            <div className="relative flex items-center gap-1">
               {space.type === 'group' && (
                 <button
                   type="button"
                   onClick={() => setShowMembers((v) => !v)}
-                  className="flex items-center gap-1 hover:text-warmDark transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 glass rounded-xl px-2.5 py-1.5 hover:shadow-md transition-all cursor-pointer"
                 >
-                  <Users className="w-4 h-4" />
-                  <span className="text-xs">{space.membersList.filter((m) => m.status === 'active').length}</span>
+                  {/* Stacked avatars */}
+                  <div className="flex -space-x-1.5">
+                    {space.membersList.filter((m) => m.status === 'active').slice(0, 3).map((m) => (
+                      <div key={m.userId} className="w-5 h-5 rounded-full bg-gradient-to-br from-gold/60 to-coral/50 flex items-center justify-center text-white text-[9px] font-bold ring-1 ring-white/60 flex-shrink-0">
+                        {m.name.charAt(0).toUpperCase()}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-xs font-sans text-warmDark/60">
+                    {space.membersList.filter((m) => m.status === 'active').length}
+                  </span>
                 </button>
               )}
               {showMembers && space.type === 'group' && MembersPanel}
@@ -372,6 +381,8 @@ export default function Timeline() {
                         onReact={handleReact}
                         onEdit={handleEdit}
                         onCardClick={handleCardClick}
+                        spaceType={space.type}
+                        members={space.membersList}
                       />
                     </div>
                   </div>

@@ -3,6 +3,7 @@ import { MapPin, Plus, Image, BookOpen, Camera, Images, Upload, Loader2, X, Chev
 import React, { useState, useRef, useEffect } from 'react'
 import { Memory, SubStory } from '../types'
 import { uploadMultipleImages } from '../cloudinary'
+import RichTextEditor from './RichTextEditor'
 
 interface Props {
   memory: Memory
@@ -67,15 +68,17 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
     setNewType('text'); setEditingSubstoryId(null); setShowAddForm(false)
   }
 
+  const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim()
+
   const handleSaveSubstory = () => {
-    if (!newTitle.trim() && !newContent.trim()) return
+    if (!newTitle.trim() && !stripHtml(newContent)) return
     const substory: SubStory = {
       id: editingSubstoryId || `sub-${Date.now()}`,
       date: substories.find((s) => s.id === editingSubstoryId)?.date || new Date().toISOString().split('T')[0],
       type: newType,
       title: newTitle.trim() || undefined,
-      content: newType === 'text' ? newContent.trim() : undefined,
-      caption: newType !== 'text' ? newContent.trim() : undefined,
+      content: newType === 'text' ? newContent : undefined,
+      caption: newType !== 'text' ? newContent : undefined,
       photos: newType !== 'text' ? newPhotos : undefined,
     }
     if (editingSubstoryId) {
@@ -186,7 +189,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
               )}
             </div>
             {memory.story && (
-              <p className="font-sans text-xs text-warmDark/60 leading-relaxed mt-1 line-clamp-2">
+              <p className="font-sans text-xs text-warmDark/75 leading-relaxed mt-1 line-clamp-2">
                 {memory.story}
               </p>
             )}
@@ -240,7 +243,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center z-10">
                             <div className="w-2.5 h-2.5 rounded-full bg-white" />
                           </div>
-                          <span className="font-handwriting text-xl text-warmDark/55">
+                          <span className="font-handwriting text-xl text-warmDark/75">
                             {formatDate(date)}
                           </span>
                         </div>
@@ -277,14 +280,12 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               {sub.type === 'text' && (
                                 <div className="relative">
                                   {sub.title && (
-                                    <h4 className="font-serif text-lg text-warmDark mb-2">
+                                    <h4 className="font-serif text-lg font-bold text-warmDark mb-2">
                                       {sub.title}
                                     </h4>
                                   )}
                                   {sub.content && (
-                                    <p className="font-sans text-warmDark/65 leading-relaxed">
-                                      {sub.content}
-                                    </p>
+                                    <div className="font-sans text-warmDark/90 leading-relaxed" dangerouslySetInnerHTML={{ __html: sub.content }} />
                                   )}
                                 </div>
                               )}
@@ -292,8 +293,8 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               {/* Image left, text right */}
                               {(sub.type === 'img-left' || sub.type === 'photo') && (
                                 <div>
-                                  {sub.title && <h4 className="font-serif text-lg text-warmDark mb-3">{sub.title}</h4>}
-                                  <div className="flex gap-3 items-start">
+                                  {sub.title && <h4 className="font-serif text-lg font-bold text-warmDark mb-3">{sub.title}</h4>}
+                                  <div className="flex gap-3 items-center">
                                     <div className="w-1/2 flex-shrink-0 bg-black/5 rounded-xl overflow-hidden">
                                       {sub.photos && sub.photos.length > 0 ? (
                                         <img src={sub.photos[0]} alt="" className="w-full rounded-xl object-contain" />
@@ -304,7 +305,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                       )}
                                     </div>
                                     {sub.caption && (
-                                      <p className="font-sans text-sm text-warmDark/65 leading-relaxed flex-1 pt-1">{sub.caption}</p>
+                                      <div className="font-sans text-sm text-warmDark/90 leading-relaxed flex-1" dangerouslySetInnerHTML={{ __html: sub.caption }} />
                                     )}
                                   </div>
                                 </div>
@@ -313,10 +314,10 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               {/* Text left, image right */}
                               {sub.type === 'img-right' && (
                                 <div>
-                                  {sub.title && <h4 className="font-serif text-lg text-warmDark mb-3">{sub.title}</h4>}
-                                  <div className="flex gap-3 items-start">
+                                  {sub.title && <h4 className="font-serif text-lg font-bold text-warmDark mb-3">{sub.title}</h4>}
+                                  <div className="flex gap-3 items-center">
                                     {sub.caption && (
-                                      <p className="font-sans text-sm text-warmDark/65 leading-relaxed flex-1 pt-1">{sub.caption}</p>
+                                      <div className="font-sans text-sm text-warmDark/90 leading-relaxed flex-1" dangerouslySetInnerHTML={{ __html: sub.caption }} />
                                     )}
                                     <div className="w-1/2 flex-shrink-0 bg-black/5 rounded-xl overflow-hidden">
                                       {sub.photos && sub.photos.length > 0 ? (
@@ -334,7 +335,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               {/* Image top, text below */}
                               {sub.type === 'img-top' && (
                                 <div>
-                                  {sub.title && <h4 className="font-serif text-lg text-warmDark mb-3">{sub.title}</h4>}
+                                  {sub.title && <h4 className="font-serif text-lg font-bold text-warmDark mb-3">{sub.title}</h4>}
                                   {sub.photos && sub.photos.length > 0 ? (
                                     <img src={sub.photos[0]} alt="" className="w-3/5 rounded-2xl object-contain bg-black/5 mb-3" />
                                   ) : (
@@ -342,15 +343,15 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                       <Image className="w-10 h-10 text-warmDark/25" />
                                     </div>
                                   )}
-                                  {sub.caption && <p className="font-sans text-sm text-warmDark/65 leading-relaxed">{sub.caption}</p>}
+                                  {sub.caption && <div className="font-sans text-sm text-warmDark/90 leading-relaxed" dangerouslySetInnerHTML={{ __html: sub.caption }} />}
                                 </div>
                               )}
 
                               {/* Text top, image below */}
                               {sub.type === 'img-bottom' && (
                                 <div>
-                                  {sub.title && <h4 className="font-serif text-lg text-warmDark mb-3">{sub.title}</h4>}
-                                  {sub.caption && <p className="font-sans text-sm text-warmDark/65 leading-relaxed mb-3">{sub.caption}</p>}
+                                  {sub.title && <h4 className="font-serif text-lg font-bold text-warmDark mb-3">{sub.title}</h4>}
+                                  {sub.caption && <div className="font-sans text-sm text-warmDark/65 leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: sub.caption }} />}
                                   {sub.photos && sub.photos.length > 0 ? (
                                     <img src={sub.photos[0]} alt="" className="w-3/5 rounded-2xl object-contain bg-black/5" />
                                   ) : (
@@ -364,7 +365,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               {/* Photo grid */}
                               {sub.type === 'photos' && (
                                 <div>
-                                  {sub.title && <h4 className="font-serif text-lg text-warmDark mb-3">{sub.title}</h4>}
+                                  {sub.title && <h4 className="font-serif text-lg font-bold text-warmDark mb-3">{sub.title}</h4>}
                                   {sub.photos && sub.photos.length > 0 ? (
                                     <div className="grid grid-cols-2 gap-2">
                                       {sub.photos.map((url, n) => (
@@ -380,7 +381,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                       ))}
                                     </div>
                                   )}
-                                  {sub.caption && <p className="font-sans text-sm text-warmDark/55 italic mt-3 leading-relaxed">{sub.caption}</p>}
+                                  {sub.caption && <div className="font-sans text-sm text-warmDark/90 italic mt-3 leading-relaxed" dangerouslySetInnerHTML={{ __html: sub.caption }} />}
                                 </div>
                               )}
 
@@ -426,12 +427,11 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                       placeholder="Title..."
                                       className="w-full font-serif text-base text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-3 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/35"
                                     />
-                                    <textarea
+                                    <RichTextEditor
                                       value={newContent}
-                                      onChange={(e) => setNewContent(e.target.value)}
+                                      onChange={setNewContent}
                                       placeholder={newType === 'text' ? 'Write your story...' : 'Caption...'}
-                                      rows={3}
-                                      className="w-full font-sans text-sm text-warmDark bg-white/40 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-gold/15 transition-all resize-none leading-relaxed mb-3"
+                                      className="mb-3"
                                     />
                                     {newType !== 'text' && (
                                       <div className="mb-3">
@@ -609,12 +609,11 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                       className="w-full font-serif text-lg text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-4 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/35"
                     />
 
-                    <textarea
+                    <RichTextEditor
                       value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
+                      onChange={setNewContent}
                       placeholder={newType === 'text' ? 'Write down what happened...' : 'Add a caption...'}
-                      rows={4}
-                      className="w-full font-sans text-warmDark bg-white/40 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-gold/15 transition-all resize-none leading-relaxed mb-4"
+                      className="mb-4"
                     />
 
                     {newType !== 'text' && (

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Tag, Eye, Upload, Loader2, Images } from 'lucide-react'
+import { X, MapPin, Tag, Upload, Loader2, Images, Lock, Globe } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { Memory, SpaceMember } from '../types'
 import { uploadMultipleImages } from '../cloudinary'
@@ -21,7 +21,6 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
   const [location, setLocation] = useState('')
   const [tagsInput, setTagsInput] = useState('')
   const [visibleTo, setVisibleTo] = useState<string[]>([])
-  const [showVisibility, setShowVisibility] = useState(false)
   const [photos, setPhotos] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -50,7 +49,6 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
       setLocation(editMemory.location || '')
       setTagsInput(editMemory.tags?.join(', ') || '')
       setVisibleTo(editMemory.visibleTo || [])
-      setShowVisibility((editMemory.visibleTo?.length || 0) > 0)
       setPhotos(editMemory.photos || [])
     } else {
       setTitle('')
@@ -59,7 +57,6 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
       setLocation('')
       setTagsInput('')
       setVisibleTo([])
-      setShowVisibility(false)
       setPhotos([])
     }
   }, [editMemory, isOpen])
@@ -78,7 +75,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
         ? tagsInput.split(',').map((t) => t.trim()).filter(Boolean)
         : undefined,
       reactions: editMemory?.reactions || {},
-      visibleTo: showVisibility && visibleTo.length > 0 ? visibleTo : undefined,
+      visibleTo: visibleTo.length > 0 ? visibleTo : undefined,
       createdBy: currentUserId,
     }
 
@@ -248,48 +245,92 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                 {/* Visibility (group spaces only) */}
                 {spaceType === 'group' && activeMembers.length > 0 && (
                   <div>
-                    <button
-                      type="button"
-                      onClick={() => setShowVisibility(!showVisibility)}
-                      className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 transition-colors"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span className="font-sans text-sm">
-                        {showVisibility
-                          ? `Visible to ${visibleTo.length || 'none'} selected`
-                          : 'Visible to everyone'}
-                      </span>
-                    </button>
-                    {showVisibility && (
-                      <div className="mt-3 space-y-2 pl-6">
-                        <p className="font-handwriting text-warmDark/50 text-sm mb-2">
-                          Only these people can see this memory
-                        </p>
-                        {activeMembers.map((m) => (
-                          <label
-                            key={m.userId}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={visibleTo.includes(m.userId)}
-                              onChange={() => {
-                                setVisibleTo((prev) =>
-                                  prev.includes(m.userId)
-                                    ? prev.filter((id) => id !== m.userId)
-                                    : [...prev, m.userId]
-                                )
-                              }}
-                              className="rounded border-warmMid/20 text-gold focus:ring-gold/30"
-                            />
-                            <span className="font-sans text-sm text-warmDark">
-                              {m.name}
-                              {m.userId === currentUserId && (
-                                <span className="text-warmDark/40 ml-1">(you)</span>
-                              )}
-                            </span>
-                          </label>
-                        ))}
+                    <label className="font-handwriting text-warmDark/60 text-lg flex items-center gap-2 mb-3">
+                      {visibleTo.length === 0
+                        ? <Globe className="w-4 h-4 text-teal/60" />
+                        : <Lock className="w-4 h-4 text-coral/60" />}
+                      Visibility
+                    </label>
+
+                    {/* Everyone / Specific people toggle */}
+                    <div className="flex gap-2 mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleTo([])}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-sans transition-all ${
+                          visibleTo.length === 0
+                            ? 'bg-teal/10 border-teal/30 text-teal/80 font-medium'
+                            : 'bg-white/30 border-warmMid/15 text-warmDark/45 hover:border-warmMid/30'
+                        }`}
+                      >
+                        <Globe className="w-4 h-4" />
+                        Everyone
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (visibleTo.length === 0) {
+                            // Pre-select current user when switching to specific
+                            setVisibleTo(currentUserId ? [currentUserId] : [activeMembers[0]?.userId])
+                          }
+                        }}
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-sans transition-all ${
+                          visibleTo.length > 0
+                            ? 'bg-coral/10 border-coral/30 text-coral/80 font-medium'
+                            : 'bg-white/30 border-warmMid/15 text-warmDark/45 hover:border-warmMid/30'
+                        }`}
+                      >
+                        <Lock className="w-4 h-4" />
+                        Specific people
+                      </button>
+                    </div>
+
+                    {/* Member checklist — shown when "Specific people" */}
+                    {visibleTo.length > 0 && (
+                      <div className="bg-white/30 rounded-2xl border border-warmMid/10 overflow-hidden">
+                        {activeMembers.map((m, i) => {
+                          const checked = visibleTo.includes(m.userId)
+                          const isMe = m.userId === currentUserId
+                          return (
+                            <label
+                              key={m.userId}
+                              className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-white/30 ${
+                                i < activeMembers.length - 1 ? 'border-b border-warmMid/8' : ''
+                              } ${checked ? 'bg-coral/5' : ''}`}
+                            >
+                              {/* Checkbox */}
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                                checked ? 'bg-coral/70 border-coral/70' : 'border-warmMid/30 bg-white/50'
+                              }`}>
+                                {checked && <span className="text-white text-xs font-bold">✓</span>}
+                              </div>
+                              <input
+                                type="checkbox"
+                                className="sr-only"
+                                checked={checked}
+                                onChange={() =>
+                                  setVisibleTo((prev) =>
+                                    prev.includes(m.userId)
+                                      ? prev.filter((id) => id !== m.userId)
+                                      : [...prev, m.userId]
+                                  )
+                                }
+                              />
+                              {/* Avatar */}
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/60 to-coral/50 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                {m.name.charAt(0).toUpperCase()}
+                              </div>
+                              {/* Name */}
+                              <span className="font-sans text-sm text-warmDark flex-1">
+                                {m.name}
+                                {isMe && <span className="text-warmDark/40 text-xs ml-1">(you)</span>}
+                              </span>
+                              {/* Role badge */}
+                              {m.role === 'owner' && <span className="text-xs text-gold/80 font-sans">owner</span>}
+                              {m.role === 'admin' && <span className="text-xs text-teal/80 font-sans">admin</span>}
+                            </label>
+                          )
+                        })}
                       </div>
                     )}
                   </div>

@@ -294,9 +294,20 @@ export default function SpaceSelector() {
 
                 <div className="mt-3 text-center">
                   <h3 className="font-serif text-base md:text-lg text-warmDark font-medium">{space.title}</h3>
-                  <p className="font-handwriting text-warmDark/70 text-sm">
-                    {space.memoryCount} {space.memoryCount === 1 ? 'memory' : 'memories'}
-                  </p>
+                  {(() => {
+                    const visibleCount = space.memories?.length
+                      ? space.memories.filter((m) => {
+                          if (!m.visibleTo || m.visibleTo.length === 0) return true
+                          if (m.createdBy === currentUser?.id) return true
+                          return currentUser ? m.visibleTo.includes(currentUser.id) : false
+                        }).length
+                      : space.memoryCount
+                    return (
+                      <p className="font-handwriting text-warmDark/70 text-sm">
+                        {visibleCount} {visibleCount === 1 ? 'memory' : 'memories'}
+                      </p>
+                    )
+                  })()}
                   {space.type === 'group' && (
                     <button
                       onClick={() => { if (!editPageMode) { setViewingSpaceId(space.id); setModal('members') } }}
