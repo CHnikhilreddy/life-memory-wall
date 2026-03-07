@@ -1,0 +1,329 @@
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Users } from 'lucide-react'
+import { useState } from 'react'
+import { useStore } from '../store/useStore'
+import { Memory, SubStory } from '../types'
+import MemoryCard from './MemoryCard'
+import MemoryDetail from './MemoryDetail'
+import CreateMemoryModal from './CreateMemoryModal'
+import FloatingNav from './FloatingNav'
+
+export default function Timeline() {
+  const { getActiveSpace, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, getVisibleMemories, currentUser } =
+    useStore()
+  const space = getActiveSpace()
+  const [showCreate, setShowCreate] = useState(false)
+  const [editingMemory, setEditingMemory] = useState<Memory | null>(null)
+  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null)
+
+  const { scrollYProgress } = useScroll()
+  const pathLength = useTransform(scrollYProgress, [0, 1], [0, 1])
+
+  if (!space) return null
+
+  const visibleMemories = getVisibleMemories(space)
+  const sortedMemories = [...visibleMemories].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
+
+  const selectedMemory = sortedMemories.find((m) => m.id === selectedMemoryId) || null
+  const isDetailOpen = selectedMemory !== null
+
+  const handleSave = (memory: Memory) => {
+    if (editingMemory) {
+      updateMemory(space.id, memory.id, memory)
+    } else {
+      addMemory(space.id, memory)
+    }
+    setEditingMemory(null)
+  }
+
+  const handleDelete = (memoryId: string) => {
+    deleteMemory(space.id, memoryId)
+    if (selectedMemoryId === memoryId) setSelectedMemoryId(null)
+  }
+
+  const handleReact = (memoryId: string, emoji: string) => {
+    addReaction(space.id, memoryId, emoji)
+  }
+
+  const handleEdit = (memory: Memory) => {
+    setEditingMemory(memory)
+    setShowCreate(true)
+  }
+
+  const handleCardClick = (memory: Memory) => {
+    setSelectedMemoryId(memory.id === selectedMemoryId ? null : memory.id)
+  }
+
+  const handleAddSubstory = (memoryId: string, substory: SubStory) => {
+    addSubstory(space.id, memoryId, substory)
+  }
+
+  const goBack = () => {
+    if (isDetailOpen) {
+      setSelectedMemoryId(null)
+    } else {
+      setActiveSpace(null)
+    }
+  }
+
+  return (
+    <div className="min-h-screen gradient-bg relative">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="sticky top-0 z-30 px-4 py-4"
+      >
+        <div className="glass rounded-2xl px-5 py-3 max-w-6xl mx-auto flex items-center justify-between">
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              goBack()
+            }}
+            className="flex items-center gap-2 text-warmDark/60 hover:text-warmDark transition-colors cursor-pointer"
+            type="button"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="font-sans text-sm">
+              {isDetailOpen ? 'Timeline' : 'Spaces'}
+            </span>
+          </button>
+          <div className="text-center">
+            <h2 className="font-serif text-lg text-warmDark flex items-center gap-2">
+              <span>{space.coverEmoji}</span>
+              {space.title}
+            </h2>
+          </div>
+          <div className="flex items-center gap-1 text-warmDark/50">
+            {space.type === 'group' && (
+              <>
+                <Users className="w-4 h-4" />
+                <span className="text-xs">{space.membersList.filter((m) => m.status === 'active').length}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Space description - only when no detail open */}
+      {!isDetailOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center px-4 pt-8 pb-4"
+        >
+          <p className="font-handwriting text-2xl text-warmDark/55">
+            {space.description || 'A collection of precious moments'}
+          </p>
+          {space.type === 'group' && space.membersList.length > 0 && (
+            <p className="font-sans text-sm text-warmDark/45 mt-2">
+              with {space.membersList.filter((m) => m.status === 'active').map((m) => m.name).join(', ')}
+            </p>
+          )}
+        </motion.div>
+      )}
+
+      {/* Main content */}
+      <div className="max-w-7xl mx-auto px-4 pb-40 pt-4">
+        <div className="flex gap-6 relative">
+
+          {/* LEFT: Timeline list */}
+          <div className={`relative transition-all duration-500 ${isDetailOpen ? 'w-[12%] min-w-[180px] hidden md:block' : 'w-full'}`}>
+
+            {/* Center path for full view */}
+            {!isDetailOpen && (
+              <svg
+                className="absolute left-1/2 -translate-x-1/2 top-0 w-2 h-full pointer-events-none hidden md:block"
+                style={{ overflow: 'visible' }}
+              >
+                <motion.line
+                  x1="1" y1="0" x2="1" y2="100%"
+                  stroke="rgba(212, 165, 116, 0.2)"
+                  strokeWidth="2" strokeDasharray="8 8"
+                  className="timeline-path"
+                  style={{ pathLength }}
+                />
+              </svg>
+            )}
+
+            {/* Left path for compact view */}
+            {isDetailOpen && (
+              <div className="absolute left-3 top-0 bottom-0 w-px bg-gradient-to-b from-gold/20 via-coral/20 to-teal/20" />
+            )}
+
+            {/* Mobile left path */}
+            {!isDetailOpen && (
+              <div className="absolute left-6 md:hidden top-0 bottom-0 w-px">
+                <motion.div
+                  className="w-full h-full bg-gradient-to-b from-gold/20 via-coral/20 to-teal/20"
+                  style={{ scaleY: pathLength, transformOrigin: 'top' }}
+                />
+              </div>
+            )}
+
+            {/* Cards */}
+            <div className={isDetailOpen ? 'space-y-3' : 'space-y-12 md:space-y-16'}>
+              {sortedMemories.map((memory, i) => {
+                const side = i % 2 === 0 ? 'left' : 'right'
+                const isSelected = memory.id === selectedMemoryId
+
+                /* ---- COMPACT MODE (detail panel open) ---- */
+                if (isDetailOpen) {
+                  return (
+                    <div key={memory.id} className="relative pl-6">
+                      <div
+                        className={`absolute left-[4px] top-3 w-2.5 h-2.5 rounded-full z-10 transition-all duration-300 ${
+                          isSelected
+                            ? 'bg-gradient-to-br from-gold to-coral scale-125'
+                            : 'bg-warmMid/20'
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleCardClick(memory)
+                        }}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 ${
+                          isSelected
+                            ? 'bg-white/50 text-warmDark'
+                            : 'text-warmDark/50 hover:text-warmDark/70 hover:bg-white/20'
+                        }`}
+                      >
+                        <h3 className={`font-serif text-sm leading-tight truncate ${
+                          isSelected ? 'text-warmDark font-medium' : ''
+                        }`}>
+                          {memory.title}
+                        </h3>
+                        <p className="font-handwriting text-xs text-warmDark/40 mt-0.5">
+                          {new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </button>
+                    </div>
+                  )
+                }
+
+                /* ---- FULL MODE (no detail panel) ---- */
+                return (
+                  <div key={memory.id} className="relative">
+                    {/* Desktop dot */}
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      className="absolute left-6 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-gradient-to-br from-gold to-coral z-10 shadow-md hidden md:block"
+                      style={{ top: '2rem' }}
+                    >
+                      <div className="absolute inset-0 rounded-full animate-ping bg-gold/30" />
+                    </motion.div>
+
+                    {/* Mobile dot */}
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      viewport={{ once: true }}
+                      className="absolute left-[18px] w-4 h-4 rounded-full bg-gradient-to-br from-gold to-coral z-10 shadow-md md:hidden"
+                      style={{ top: '1rem' }}
+                    />
+
+                    {/* Card wrapper */}
+                    <div className={`md:w-[45%] ml-12 md:ml-0 ${
+                      side === 'left' ? 'md:mr-auto md:pr-8' : 'md:ml-auto md:pl-8'
+                    }`}>
+                      <MemoryCard
+                        memory={memory}
+                        index={i}
+                        side={side}
+                        onDelete={handleDelete}
+                        onReact={handleReact}
+                        onEdit={handleEdit}
+                        onCardClick={handleCardClick}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Empty state */}
+            {sortedMemories.length === 0 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
+                <p className="font-handwriting text-3xl text-warmDark/40 mb-4">No memories yet</p>
+                <p className="font-sans text-warmDark/35">Tap the glowing orb to create your first memory</p>
+              </motion.div>
+            )}
+
+            {sortedMemories.length > 0 && !isDetailOpen && (
+              <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center pt-16">
+                <p className="font-handwriting text-xl text-warmDark/40">...and the story continues</p>
+              </motion.div>
+            )}
+          </div>
+
+          {/* RIGHT: Detail panel (desktop) — no card, lives on the wall */}
+          <AnimatePresence>
+            {isDetailOpen && selectedMemory && (
+              <motion.div
+                key="detail-panel"
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 30 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                className="flex-1 hidden md:block sticky top-24 h-[calc(100vh-7rem)] overflow-hidden"
+              >
+                <MemoryDetail
+                  memory={selectedMemory}
+                  onClose={() => setSelectedMemoryId(null)}
+                  onAddSubstory={handleAddSubstory}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Mobile: Full-screen detail overlay */}
+          <AnimatePresence>
+            {isDetailOpen && selectedMemory && (
+              <motion.div
+                key="detail-mobile"
+                initial={{ opacity: 0, y: '100%' }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: '100%' }}
+                transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                className="fixed inset-0 z-40 md:hidden bg-warmWhite"
+              >
+                <div className="h-full overflow-hidden">
+                  <MemoryDetail
+                    memory={selectedMemory}
+                    onClose={() => setSelectedMemoryId(null)}
+                    onAddSubstory={handleAddSubstory}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Floating nav */}
+      <FloatingNav
+        onCreateClick={() => { setEditingMemory(null); setShowCreate(true) }}
+        onHomeClick={() => setActiveSpace(null)}
+      />
+
+      {/* Create/Edit modal */}
+      <CreateMemoryModal
+        isOpen={showCreate}
+        onClose={() => { setShowCreate(false); setEditingMemory(null) }}
+        onSave={handleSave}
+        editMemory={editingMemory}
+        spaceType={space.type}
+        members={space.membersList}
+        currentUserId={currentUser?.id}
+      />
+    </div>
+  )
+}
