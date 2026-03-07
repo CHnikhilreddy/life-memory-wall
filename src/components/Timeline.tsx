@@ -102,6 +102,14 @@ export default function Timeline() {
 
   const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role
   const canInvite = myRole === 'owner' || myRole === 'admin'
+  const allActiveMembers = space.membersList.filter((m) => m.status === 'active')
+
+  // Members visible for the currently selected memory
+  const memoryMembers = selectedMemory
+    ? (selectedMemory.visibleTo && selectedMemory.visibleTo.length > 0
+        ? allActiveMembers.filter((m) => selectedMemory.visibleTo!.includes(m.userId))
+        : allActiveMembers)
+    : allActiveMembers
 
   const handleInvite = async () => {
     if (!inviteEmail.trim() || !inviteEmail.includes('@')) return
@@ -119,25 +127,44 @@ export default function Timeline() {
     }
   }
 
-  // Shared members panel content
-  const MembersPanel = (
+  const renderMembersList = (members: typeof allActiveMembers) => (
+    <ul className="space-y-2">
+      {members.map((m) => (
+        <li key={m.userId} className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-xs font-serif text-warmDark flex-shrink-0">
+            {m.name[0]}
+          </div>
+          <span className="font-sans text-sm text-warmDark/80 flex-1">
+            {m.name}{m.userId === currentUser?.id && <span className="text-warmDark/40 ml-1 text-xs">(you)</span>}
+          </span>
+          {m.role === 'owner' && <span className="text-xs text-gold">owner</span>}
+          {m.role === 'admin' && <span className="text-xs text-teal">admin</span>}
+        </li>
+      ))}
+    </ul>
+  )
+
+  // Panel for detail mode — shows only who can see this memory
+  const MemoryMembersPanel = (
+    <>
+      <div className="fixed inset-0 z-40" onClick={() => setShowMembers(false)} />
+      <div className="absolute right-0 top-9 z-50 glass rounded-2xl p-4 w-72 shadow-lg max-h-[80vh] overflow-y-auto">
+        <p className="font-serif text-sm text-warmDark mb-1">Who can see this</p>
+        <p className="font-sans text-xs text-warmDark/40 mb-3">
+          {selectedMemory?.visibleTo && selectedMemory.visibleTo.length > 0 ? 'Specific people only' : 'Everyone in the space'}
+        </p>
+        {renderMembersList(memoryMembers)}
+      </div>
+    </>
+  )
+
+  // Panel for normal mode — shows all space members + invite
+  const SpaceMembersPanel = (
     <>
       <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false); setInviteStatus(null) }} />
       <div className="absolute right-0 top-9 z-50 glass rounded-2xl p-4 w-72 shadow-lg max-h-[80vh] overflow-y-auto">
         <p className="font-serif text-sm text-warmDark mb-3">Members</p>
-        <ul className="space-y-2">
-          {space.membersList.filter((m) => m.status === 'active').map((m) => (
-            <li key={m.userId} className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-xs font-serif text-warmDark flex-shrink-0">
-                {m.name[0]}
-              </div>
-              <span className="font-sans text-sm text-warmDark/80 flex-1">{m.name}{m.userId === currentUser?.id && <span className="text-warmDark/40 ml-1 text-xs">(you)</span>}</span>
-              {m.role === 'owner' && <span className="text-xs text-gold">owner</span>}
-              {m.role === 'admin' && <span className="text-xs text-teal">admin</span>}
-            </li>
-          ))}
-        </ul>
-
+        {renderMembersList(allActiveMembers)}
         {canInvite && (
           <div className="mt-4 pt-4 border-t border-warmMid/10">
             <p className="font-sans text-xs text-warmDark/50 mb-2">Invite by email</p>
@@ -190,10 +217,16 @@ export default function Timeline() {
               onClick={() => setShowMembers((v) => !v)}
               className="glass rounded-xl px-3 py-2 flex items-center gap-1.5 text-warmDark/60 hover:text-warmDark transition-colors shadow-sm"
             >
-              <Users className="w-3.5 h-3.5" />
-              <span className="text-xs font-sans">{space.membersList.filter((m) => m.status === 'active').length}</span>
+              <div className="flex -space-x-1">
+                {memoryMembers.slice(0, 3).map((m) => (
+                  <div key={m.userId} className="w-4 h-4 rounded-full bg-gradient-to-br from-gold/60 to-coral/50 flex items-center justify-center text-white text-[8px] font-bold ring-1 ring-white/60 flex-shrink-0">
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+              <span className="text-xs font-sans">{memoryMembers.length}</span>
             </button>
-            {showMembers && MembersPanel}
+            {showMembers && MemoryMembersPanel}
           </div>
         </div>
       )}
@@ -222,13 +255,13 @@ export default function Timeline() {
               </h2>
             </div>
             <div className="relative flex items-center gap-1">
-              {space.type === 'group' && (
-                <button
-                  type="button"
-                  onClick={() => setShowMembers((v) => !v)}
-                  className="flex items-center gap-1.5 glass rounded-xl px-2.5 py-1.5 hover:shadow-md transition-all cursor-pointer"
-                >
-                  {/* Stacked avatars */}
+              <button
+                type="button"
+                onClick={() => setShowMembers((v) => !v)}
+                className="flex items-center gap-1.5 glass rounded-xl px-2.5 py-1.5 hover:shadow-md transition-all cursor-pointer"
+              >
+                {/* Stacked avatars */}
+                {space.membersList.filter((m) => m.status === 'active').length > 0 ? (
                   <div className="flex -space-x-1.5">
                     {space.membersList.filter((m) => m.status === 'active').slice(0, 3).map((m) => (
                       <div key={m.userId} className="w-5 h-5 rounded-full bg-gradient-to-br from-gold/60 to-coral/50 flex items-center justify-center text-white text-[9px] font-bold ring-1 ring-white/60 flex-shrink-0">
@@ -236,12 +269,14 @@ export default function Timeline() {
                       </div>
                     ))}
                   </div>
-                  <span className="text-xs font-sans text-warmDark/60">
-                    {space.membersList.filter((m) => m.status === 'active').length}
-                  </span>
-                </button>
-              )}
-              {showMembers && space.type === 'group' && MembersPanel}
+                ) : (
+                  <Users className="w-4 h-4 text-warmDark/50" />
+                )}
+                <span className="text-xs font-sans text-warmDark/60">
+                  {space.membersList.filter((m) => m.status === 'active').length}
+                </span>
+              </button>
+              {showMembers && SpaceMembersPanel}
             </div>
           </div>
         </motion.div>

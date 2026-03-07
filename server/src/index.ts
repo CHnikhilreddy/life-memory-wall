@@ -9,7 +9,14 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, mobile apps) or any localhost port
+    if (!origin || /^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+      callback(null, true)
+    } else {
+      callback(null, process.env.FRONTEND_URL === origin)
+    }
+  },
   credentials: true,
 }))
 app.use(express.json())

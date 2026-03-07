@@ -242,8 +242,8 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                   />
                 </div>
 
-                {/* Visibility (group spaces only) */}
-                {spaceType === 'group' && activeMembers.length > 0 && (
+                {/* Visibility — show whenever there are multiple members */}
+                {activeMembers.length > 1 && (
                   <div>
                     <label className="font-handwriting text-warmDark/60 text-lg flex items-center gap-2 mb-3">
                       {visibleTo.length === 0

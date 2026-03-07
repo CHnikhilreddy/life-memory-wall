@@ -192,21 +192,25 @@ export default function LoginPage() {
                 </button>
               </motion.div>
 
-              {/* Quick login for testing */}
+              {/* Quick login */}
               {allUsers.length > 0 && (
-                <motion.div className="mt-12" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
-                  <p className="text-warmDark/35 text-xs mb-3 font-sans">Quick login (for testing)</p>
+                <motion.div className="mt-10" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex-1 h-px bg-warmMid/20" />
+                    <p className="text-warmDark/50 text-xs font-sans whitespace-nowrap">Quick login</p>
+                    <div className="flex-1 h-px bg-warmMid/20" />
+                  </div>
                   <div className="flex flex-wrap justify-center gap-2">
                     {allUsers.map((u) => (
                       <button
                         key={u.id}
                         onClick={() => login({ id: u.id, name: u.name, email: u.email }).catch(() => {})}
-                        className="glass rounded-full px-4 py-2 text-sm text-warmDark/60 hover:text-warmDark hover:bg-white/60 transition-all flex items-center gap-2"
+                        className="bg-white/60 border border-warmMid/20 rounded-full px-4 py-2 text-sm text-warmDark hover:bg-white/80 hover:shadow-md transition-all flex items-center gap-2 shadow-sm"
                       >
-                        <span className="w-6 h-6 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-xs font-serif text-warmDark">
-                          {u.name[0]}
+                        <span className="w-6 h-6 rounded-full bg-gradient-to-br from-gold/60 to-coral/50 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                          {u.name[0].toUpperCase()}
                         </span>
-                        {u.name}
+                        <span className="font-sans">{u.name}</span>
                       </button>
                     ))}
                   </div>
