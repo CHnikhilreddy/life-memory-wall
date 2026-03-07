@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, MapPin, Tag, Eye, Upload, Loader2 } from 'lucide-react'
+import { X, MapPin, Tag, Eye, Upload, Loader2, Images } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { Memory, SpaceMember } from '../types'
 import { uploadMultipleImages } from '../cloudinary'
@@ -25,6 +25,20 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
   const [photos, setPhotos] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleFiles = async (files: File[]) => {
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await uploadMultipleImages(files)
+      setPhotos((prev) => [...prev, ...urls])
+    } catch {
+      alert('Failed to upload images. Please try again.')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const activeMembers = members?.filter((m) => m.status === 'active') || []
 
@@ -162,20 +176,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                     accept="image/*"
                     multiple
                     className="hidden"
-                    onChange={async (e) => {
-                      const files = Array.from(e.target.files || [])
-                      if (files.length === 0) return
-                      setUploading(true)
-                      try {
-                        const urls = await uploadMultipleImages(files)
-                        setPhotos((prev) => [...prev, ...urls])
-                      } catch {
-                        alert('Failed to upload images. Please try again.')
-                      } finally {
-                        setUploading(false)
-                        if (fileInputRef.current) fileInputRef.current.value = ''
-                      }
-                    }}
+                    onChange={(e) => handleFiles(Array.from(e.target.files || []))}
                   />
                   {photos.length > 0 && (
                     <div className="grid grid-cols-3 gap-2 mb-3">
@@ -193,24 +194,31 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                       ))}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="w-full border-2 border-dashed border-warmMid/15 rounded-xl p-6 text-center hover:border-gold/30 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    {uploading ? (
-                      <div className="flex items-center justify-center gap-2 text-warmDark/50">
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                        <span className="text-sm">Uploading...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center gap-2 text-warmDark/40">
-                        <Upload className="w-5 h-5" />
-                        <span className="text-sm">Tap to upload photos</span>
-                      </div>
-                    )}
-                  </button>
+                  {uploading ? (
+                    <div className="flex items-center justify-center gap-2 text-warmDark/50 py-4">
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span className="text-sm">Uploading...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-warmMid/15 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/30 transition-colors"
+                      >
+                        <Upload className="w-5 h-5 text-warmDark/40" />
+                        <span className="text-xs text-warmDark/40">From Device</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-2 border-dashed border-warmMid/15 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/30 transition-colors"
+                      >
+                        <Images className="w-5 h-5 text-warmDark/40" />
+                        <span className="text-xs text-warmDark/40">Google Photos</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Location */}

@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Users, Send } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
 import { Memory, SubStory } from '../types'
@@ -10,12 +10,19 @@ import CreateMemoryModal from './CreateMemoryModal'
 import FloatingNav from './FloatingNav'
 
 export default function Timeline() {
-  const { getActiveSpace, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser } =
+  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser } =
     useStore()
-  const space = getActiveSpace()
   const [showCreate, setShowCreate] = useState(false)
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null)
-  const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null)
+  const [selectedMemoryId, setSelectedMemoryIdRaw] = useState<string | null>(
+    () => localStorage.getItem('selectedMemoryId')
+  )
+
+  const setSelectedMemoryId = (id: string | null) => {
+    setSelectedMemoryIdRaw(id)
+    if (id) localStorage.setItem('selectedMemoryId', id)
+    else localStorage.removeItem('selectedMemoryId')
+  }
 
   const [showMembers, setShowMembers] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -26,12 +33,20 @@ export default function Timeline() {
   const { scrollYProgress } = useScroll()
   const pathLength = useTransform(scrollYProgress, [0, 1], [0, 1])
 
-  if (!space) return null
-
-  const visibleMemories = getVisibleMemories(space)
+  const visibleMemories = space ? getVisibleMemories(space) : []
   const sortedMemories = [...visibleMemories].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
+
+  // If restored selectedMemoryId no longer exists in this space, clear it
+  useEffect(() => {
+    if (selectedMemoryId && sortedMemories.length > 0) {
+      const exists = sortedMemories.some((m) => m.id === selectedMemoryId)
+      if (!exists) setSelectedMemoryId(null)
+    }
+  }, [sortedMemories.length])
+
+  if (!space) return null
 
   const selectedMemory = sortedMemories.find((m) => m.id === selectedMemoryId) || null
   const isDetailOpen = selectedMemory !== null
@@ -80,6 +95,7 @@ export default function Timeline() {
     if (isDetailOpen) {
       setSelectedMemoryId(null)
     } else {
+      setSelectedMemoryId(null)
       setActiveSpace(null)
     }
   }
@@ -158,7 +174,7 @@ export default function Timeline() {
 
       {/* ── DETAIL MODE: slim sticky header ── */}
       {isDetailOpen && (
-        <div className="sticky top-0 z-30 flex items-center justify-between px-4 py-2" style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}>
+        <div className="sticky top-0 z-30 rounded-b-3xl flex items-center justify-between px-4 py-2" style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}>
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); goBack() }}
@@ -187,7 +203,7 @@ export default function Timeline() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-30 px-4 py-4"
+          className="sticky top-0 z-30 rounded-b-3xl px-4 py-4"
           style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}
         >
           <div className="glass rounded-2xl px-5 py-3 max-w-6xl mx-auto flex items-center justify-between">
@@ -241,7 +257,7 @@ export default function Timeline() {
       )}
 
       {/* Main content */}
-      <div className={`max-w-7xl mx-auto px-4 ${isDetailOpen ? 'pt-0 pb-0' : 'pb-40 pt-4'}`}>
+      <div className={`relative z-0 max-w-7xl mx-auto px-4 ${isDetailOpen ? 'pt-0 pb-0' : 'pb-40 pt-4'}`}>
         <div className="flex gap-6 relative">
 
           {/* LEFT: Timeline list */}

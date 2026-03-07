@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Plus, Image, BookOpen, Camera, Upload, Loader2, X, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
+import { MapPin, Plus, Image, BookOpen, Camera, Images, Upload, Loader2, X, ChevronLeft, ChevronRight, Pencil, Trash2 } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Memory, SubStory } from '../types'
 import { uploadMultipleImages } from '../cloudinary'
 
@@ -38,6 +38,20 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
   const [editingSubstoryId, setEditingSubstoryId] = useState<string | null>(null)
   const [editMode, setEditMode] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const editFileInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoFiles = async (files: File[], setter: React.Dispatch<React.SetStateAction<string[]>>, inputRef: React.RefObject<HTMLInputElement>) => {
+    if (!files.length) return
+    setUploading(true)
+    try {
+      const urls = await uploadMultipleImages(files)
+      setter((prev) => [...prev, ...urls])
+    } catch { alert('Upload failed') }
+    finally {
+      setUploading(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
 
   const substories = memory.substories || []
 
@@ -122,6 +136,21 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
 
   return (
     <div className="h-full overflow-y-auto">
+      {/* Always-visible edit toggle — zero-height sticky overlay, never pushes content */}
+      <div className="sticky top-3 z-20 h-0 flex justify-end px-3 pointer-events-none">
+        <button
+          onClick={() => { setEditMode((v) => !v); if (editMode) resetForm() }}
+          title={editMode ? 'Done editing' : 'Edit moments'}
+          className={`pointer-events-auto w-8 h-8 rounded-full shadow-md flex items-center justify-center transition-all ${
+            editMode
+              ? 'bg-coral/20 text-coral ring-1 ring-coral/30'
+              : 'bg-white/80 backdrop-blur-sm text-warmDark/40 hover:text-warmDark'
+          }`}
+        >
+          <Pencil className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
       {/* Cover photo — scrolls away naturally */}
       {coverPhoto && (
         <div ref={coverRef} className="relative h-48 overflow-hidden flex-shrink-0">
@@ -138,7 +167,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -56, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className="sticky top-0 z-10 border-b border-warmMid/10 px-5 pt-3 pb-2.5"
+            className="sticky top-0 z-10 rounded-b-3xl border-b border-warmMid/10 px-5 pt-3 pb-2.5"
             style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}
           >
         <div className="flex items-start justify-between gap-3">
@@ -176,13 +205,6 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
               className={`p-1.5 rounded-lg transition-all ${activeTab === 'photos' ? 'bg-gold/20 text-warmDark' : 'text-warmDark/35 hover:text-warmDark/55'}`}
             >
               <Camera className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => { setEditMode((v) => !v); if (editMode) resetForm() }}
-              title={editMode ? 'Done editing' : 'Edit moments'}
-              className={`p-1.5 rounded-lg transition-all ${editMode ? 'bg-coral/15 text-coral' : 'text-warmDark/35 hover:text-warmDark/55'}`}
-            >
-              <Pencil className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -364,6 +386,92 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
 
                               {/* Separator between stories */}
                               <div className="h-px bg-warmMid/5 mt-5" />
+
+                              {/* Inline edit form — appears directly below this substory */}
+                              <AnimatePresence>
+                                {editingSubstoryId === sub.id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -8 }}
+                                    className="mt-3 mb-2 bg-white/40 rounded-2xl p-4 border border-white/40"
+                                  >
+                                    {/* Layout picker */}
+                                    <div className="mb-3">
+                                      <p className="font-handwriting text-warmDark/45 text-xs mb-1.5">Layout</p>
+                                      <div className="grid grid-cols-6 gap-1.5">
+                                        {([
+                                          { type: 'text', preview: <div className="flex flex-col gap-0.5 w-full px-0.5"><div className="h-1 bg-warmDark/25 rounded-full"/><div className="h-1 bg-warmDark/15 rounded-full w-4/5"/><div className="h-1 bg-warmDark/15 rounded-full"/></div> },
+                                          { type: 'img-left', preview: <div className="flex gap-0.5 w-full px-0.5"><div className="w-1/2 h-5 bg-gold/30 rounded"/><div className="flex-1 flex flex-col gap-0.5 justify-center"><div className="h-1 bg-warmDark/20 rounded-full"/><div className="h-1 bg-warmDark/12 rounded-full w-4/5"/></div></div> },
+                                          { type: 'img-right', preview: <div className="flex gap-0.5 w-full px-0.5"><div className="flex-1 flex flex-col gap-0.5 justify-center"><div className="h-1 bg-warmDark/20 rounded-full"/><div className="h-1 bg-warmDark/12 rounded-full w-4/5"/></div><div className="w-1/2 h-5 bg-coral/30 rounded"/></div> },
+                                          { type: 'img-top', preview: <div className="flex flex-col gap-0.5 w-full px-0.5"><div className="h-3.5 bg-lavender/50 rounded w-full"/><div className="h-1 bg-warmDark/20 rounded-full"/><div className="h-1 bg-warmDark/12 rounded-full w-4/5"/></div> },
+                                          { type: 'img-bottom', preview: <div className="flex flex-col gap-0.5 w-full px-0.5"><div className="h-1 bg-warmDark/20 rounded-full"/><div className="h-1 bg-warmDark/12 rounded-full w-4/5"/><div className="h-3.5 bg-teal/30 rounded w-full"/></div> },
+                                          { type: 'photos', preview: <div className="grid grid-cols-2 gap-0.5 w-full px-0.5"><div className="h-2.5 bg-gold/25 rounded"/><div className="h-2.5 bg-coral/25 rounded"/><div className="h-2.5 bg-lavender/35 rounded"/><div className="h-2.5 bg-teal/25 rounded"/></div> },
+                                        ] as { type: typeof newType; preview: React.ReactNode }[]).map(({ type, preview }) => (
+                                          <button
+                                            key={type}
+                                            onClick={() => setNewType(type)}
+                                            className={`flex flex-col items-center gap-1 p-1.5 rounded-lg border transition-all ${newType === type ? 'border-gold/50 bg-gold/10 ring-1 ring-gold/25' : 'border-warmMid/10 hover:border-warmMid/20 hover:bg-white/20'}`}
+                                          >
+                                            <div className="w-full h-7 flex items-center justify-center">{preview}</div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+
+                                    <input
+                                      type="text"
+                                      value={newTitle}
+                                      onChange={(e) => setNewTitle(e.target.value)}
+                                      placeholder="Title..."
+                                      className="w-full font-serif text-base text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-3 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/35"
+                                    />
+                                    <textarea
+                                      value={newContent}
+                                      onChange={(e) => setNewContent(e.target.value)}
+                                      placeholder={newType === 'text' ? 'Write your story...' : 'Caption...'}
+                                      rows={3}
+                                      className="w-full font-sans text-sm text-warmDark bg-white/40 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-gold/15 transition-all resize-none leading-relaxed mb-3"
+                                    />
+                                    {newType !== 'text' && (
+                                      <div className="mb-3">
+                                        <input ref={editFileInputRef} type="file" accept="image/*" multiple className="hidden"
+                                          onChange={(e) => handlePhotoFiles(Array.from(e.target.files || []), setNewPhotos, editFileInputRef)} />
+                                        {newPhotos.length > 0 && (
+                                          <div className="grid grid-cols-3 gap-1.5 mb-2">
+                                            {newPhotos.map((url, pi) => (
+                                              <div key={pi} className="relative group aspect-square rounded-lg overflow-hidden">
+                                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                                <button type="button" onClick={() => setNewPhotos((p) => p.filter((_, idx) => idx !== pi))}
+                                                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                  <X className="w-3 h-3 text-white" />
+                                                </button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {uploading
+                                          ? <div className="flex items-center justify-center gap-2 text-warmDark/50 py-2"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-xs">Uploading...</span></div>
+                                          : <div className="grid grid-cols-2 gap-1.5">
+                                              <button type="button" onClick={() => editFileInputRef.current?.click()}
+                                                className="border border-dashed border-warmMid/15 rounded-xl p-2.5 flex items-center justify-center gap-1.5 hover:border-gold/25 transition-colors">
+                                                <Upload className="w-3.5 h-3.5 text-warmDark/35" /><span className="text-xs text-warmDark/35">From Device</span>
+                                              </button>
+                                              <button type="button" onClick={() => editFileInputRef.current?.click()}
+                                                className="border border-dashed border-warmMid/15 rounded-xl p-2.5 flex items-center justify-center gap-1.5 hover:border-gold/25 transition-colors">
+                                                <Images className="w-3.5 h-3.5 text-warmDark/35" /><span className="text-xs text-warmDark/35">Google Photos</span>
+                                              </button>
+                                            </div>
+                                          }
+                                      </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                      <button onClick={resetForm} className="flex-1 py-2 rounded-xl text-xs text-warmDark/40 hover:bg-white/20 transition-all">Cancel</button>
+                                      <button onClick={handleSaveSubstory} className="flex-1 py-2 rounded-xl text-xs bg-gradient-to-r from-gold/80 to-coral/70 text-white font-medium">Save changes</button>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </motion.div>
                           ))}
                         </div>
@@ -375,9 +483,9 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                 </div>
               )}
 
-              {/* Add moment */}
+              {/* Add moment — only for new substories, hidden while inline editing */}
               <div className="mt-8">
-                {!showAddForm ? (
+                {!showAddForm && !editingSubstoryId ? (
                   <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
@@ -387,13 +495,13 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                     <Plus className="w-4 h-4" />
                     <span className="font-handwriting text-lg">Add a moment</span>
                   </motion.button>
-                ) : (
+                ) : !editingSubstoryId ? (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white/30 rounded-2xl p-6 border border-white/40"
                   >
-                    <h4 className="font-serif text-xl text-warmDark mb-5">{editingSubstoryId ? 'Edit moment' : 'Add a moment'}</h4>
+                    <h4 className="font-serif text-xl text-warmDark mb-5">Add a moment</h4>
 
                     {/* Layout template picker */}
                     <div className="mb-5">
@@ -511,27 +619,8 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
 
                     {newType !== 'text' && (
                       <div className="mb-4">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/*"
-                          multiple={newType === 'photos' || newType === 'img-left' || newType === 'img-right' || newType === 'img-top' || newType === 'img-bottom'}
-                          className="hidden"
-                          onChange={async (e) => {
-                            const files = Array.from(e.target.files || [])
-                            if (files.length === 0) return
-                            setUploading(true)
-                            try {
-                              const urls = await uploadMultipleImages(files)
-                              setNewPhotos((prev) => [...prev, ...urls])
-                            } catch {
-                              alert('Failed to upload images. Please try again.')
-                            } finally {
-                              setUploading(false)
-                              if (fileInputRef.current) fileInputRef.current.value = ''
-                            }
-                          }}
-                        />
+                        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+                          onChange={(e) => handlePhotoFiles(Array.from(e.target.files || []), setNewPhotos, fileInputRef)} />
                         {newPhotos.length > 0 && (
                           <div className="grid grid-cols-3 gap-2 mb-3">
                             {newPhotos.map((url, i) => (
@@ -548,24 +637,25 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                             ))}
                           </div>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={uploading}
-                          className="w-full border-2 border-dashed border-warmMid/10 rounded-xl p-6 text-center hover:border-gold/25 transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          {uploading ? (
-                            <div className="flex items-center justify-center gap-2 text-warmDark/50">
-                              <Loader2 className="w-5 h-5 animate-spin" />
-                              <span className="text-sm">Uploading...</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center gap-2 text-warmDark/35">
-                              <Upload className="w-5 h-5" />
-                              <span className="text-sm">Tap to add photos</span>
-                            </div>
-                          )}
-                        </button>
+                        {uploading ? (
+                          <div className="flex items-center justify-center gap-2 text-warmDark/50 py-4">
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span className="text-sm">Uploading...</span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-2">
+                            <button type="button" onClick={() => fileInputRef.current?.click()}
+                              className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
+                              <Upload className="w-5 h-5 text-warmDark/35" />
+                              <span className="text-xs text-warmDark/35">From Device</span>
+                            </button>
+                            <button type="button" onClick={() => fileInputRef.current?.click()}
+                              className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
+                              <Images className="w-5 h-5 text-warmDark/35" />
+                              <span className="text-xs text-warmDark/35">Google Photos</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -580,11 +670,11 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                         onClick={handleSaveSubstory}
                         className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-medium"
                       >
-                        {editingSubstoryId ? 'Save changes' : 'Add moment'}
+                        Add moment
                       </button>
                     </div>
                   </motion.div>
-                )}
+                ) : null}
               </div>
             </motion.div>
           ) : (
