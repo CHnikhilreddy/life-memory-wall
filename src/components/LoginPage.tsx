@@ -5,15 +5,18 @@ import { useStore } from '../store/useStore'
 import { api, setToken } from '../api'
 import ParticleBackground from './ParticleBackground'
 
-type Screen = 'main' | 'email' | 'signup'
+const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
+
+type Screen = 'main' | 'email' | 'signup' | 'verify' | 'forgot'
 type EmailStep = 'enter' | 'password'
+type ForgotStep = 'email' | 'code' | 'newpass'
 
 export default function LoginPage() {
   const login = useStore((s) => s.login)
   const fetchSpaces = useStore((s) => s.fetchSpaces)
   const [screen, setScreen] = useState<Screen>('main')
 
-  // Email flow
+  // Email login flow
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -29,6 +32,23 @@ export default function LoginPage() {
   const [showSignupPassword, setShowSignupPassword] = useState(false)
   const [signupError, setSignupError] = useState('')
 
+  // Verify flow
+  const [verifyUserId, setVerifyUserId] = useState('')
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifyError, setVerifyError] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendMsg, setResendMsg] = useState('')
+
+  // Forgot password flow
+  const [forgotStep, setForgotStep] = useState<ForgotStep>('email')
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotCode, setForgotCode] = useState('')
+  const [forgotNewPass, setForgotNewPass] = useState('')
+  const [forgotConfirm, setForgotConfirm] = useState('')
+  const [showForgotPass, setShowForgotPass] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+  const [forgotSuccess, setForgotSuccess] = useState(false)
+
   const resetAll = () => {
     setScreen('main')
     setEmail('')
@@ -40,11 +60,31 @@ export default function LoginPage() {
     setSignupPassword('')
     setSignupConfirm('')
     setSignupError('')
+    setVerifyUserId('')
+    setVerifyCode('')
+    setVerifyError('')
+    setResendMsg('')
+    setForgotStep('email')
+    setForgotEmail('')
+    setForgotCode('')
+    setForgotNewPass('')
+    setForgotConfirm('')
+    setForgotError('')
+    setForgotSuccess(false)
     setLoading(false)
   }
 
+  const goToVerify = (userId: string) => {
+    setVerifyUserId(userId)
+    setVerifyCode('')
+    setVerifyError('')
+    setResendMsg('')
+    setScreen('verify')
+  }
+
   const handleEmailNext = () => {
-    if (!email.trim() || !email.includes('@')) return
+    if (!email.trim()) return
+    if (!isValidEmail(email)) { setLoginError('Enter a valid email address (e.g. name@example.com)'); return }
     setLoginError('')
     setEmailStep('password')
   }
@@ -56,7 +96,13 @@ export default function LoginPage() {
     try {
       await login({ email: email.trim().toLowerCase(), password })
     } catch (err: any) {
-      setLoginError(err.message || 'Invalid email or password')
+      if (err.emailNotVerified && err.userId) {
+        goToVerify(err.userId)
+      } else if (err.noAccount) {
+        setLoginError('__noAccount__')
+      } else {
+        setLoginError(err.message || 'Invalid email or password')
+      }
     } finally {
       setLoading(false)
     }
@@ -65,33 +111,103 @@ export default function LoginPage() {
   const handleSignup = async () => {
     setSignupError('')
     if (!signupName.trim() || !signupEmail.trim() || !signupPassword) {
-      setSignupError('All fields are required')
-      return
+      setSignupError('All fields are required'); return
     }
-    if (!signupEmail.includes('@')) {
-      setSignupError('Enter a valid email address')
-      return
+    if (!isValidEmail(signupEmail)) {
+      setSignupError('Enter a valid email address (e.g. name@example.com)'); return
     }
     if (signupPassword.length < 6) {
-      setSignupError('Password must be at least 6 characters')
-      return
+      setSignupError('Password must be at least 6 characters'); return
     }
     if (signupPassword !== signupConfirm) {
-      setSignupError('Passwords do not match')
-      return
+      setSignupError('Passwords do not match'); return
     }
     setLoading(true)
     try {
       const result = await api.signup({ name: signupName.trim(), email: signupEmail.trim().toLowerCase(), password: signupPassword })
       setToken(result.token)
-      useStore.setState({ isLoggedIn: true, currentUser: result.user, initialized: true })
-      await fetchSpaces()
+      // Go to verify screen
+      goToVerify(result.user.id)
     } catch (err: any) {
       setSignupError(err.message || 'Sign up failed. Please try again.')
     } finally {
       setLoading(false)
     }
   }
+
+  const handleVerify = async () => {
+    if (!verifyCode.trim() || verifyCode.length < 6) return
+    setLoading(true)
+    setVerifyError('')
+    try {
+      const result = await api.verifyEmail(verifyUserId, verifyCode.trim())
+      setToken(result.token)
+      useStore.setState({ isLoggedIn: true, currentUser: result.user, initialized: true })
+      await fetchSpaces()
+    } catch (err: any) {
+      setVerifyError(err.message || 'Invalid code. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    setResendLoading(true)
+    setResendMsg('')
+    try {
+      await api.sendVerification(verifyUserId)
+      setResendMsg('A new code has been sent to your email.')
+    } catch {
+      setResendMsg('Failed to resend. Please try again.')
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
+  const handleForgotSend = async () => {
+    if (!forgotEmail.trim()) return
+    if (!isValidEmail(forgotEmail)) { setForgotError('Enter a valid email address (e.g. name@example.com)'); return }
+    setLoading(true)
+    setForgotError('')
+    try {
+      await api.forgotPassword(forgotEmail.trim().toLowerCase())
+      setForgotStep('code')
+    } catch (err: any) {
+      setForgotError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForgotVerifyCode = () => {
+    if (!forgotCode.trim() || forgotCode.length < 6) {
+      setForgotError('Enter the 6-digit code from your email'); return
+    }
+    setForgotError('')
+    setForgotStep('newpass')
+  }
+
+  const handleForgotReset = async () => {
+    setForgotError('')
+    if (!forgotNewPass || forgotNewPass.length < 6) {
+      setForgotError('Password must be at least 6 characters'); return
+    }
+    if (forgotNewPass !== forgotConfirm) {
+      setForgotError('Passwords do not match'); return
+    }
+    setLoading(true)
+    try {
+      await api.resetPassword(forgotEmail.trim().toLowerCase(), forgotCode.trim(), forgotNewPass)
+      setForgotSuccess(true)
+    } catch (err: any) {
+      setForgotError(err.message || 'Reset failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const inputClass = "w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
+  const codeInputClass = "w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-mono text-center text-2xl tracking-[0.5em] outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
 
   return (
     <div className="min-h-screen gradient-bg flex items-center justify-center relative overflow-hidden">
@@ -124,7 +240,7 @@ export default function LoginPage() {
               className="text-center"
             >
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.2 }}>
-                <h1 className="font-serif text-5xl md:text-6xl font-bold text-warmDark mb-3 text-shadow-warm">The Inner Circle</h1>
+                <h1 className="font-serif text-5xl md:text-6xl font-bold text-warmDark mb-3 text-shadow-warm">My Inner Circle</h1>
                 <p className="font-handwriting text-2xl text-warmDark/60 mb-14">Your stories, beautifully preserved</p>
               </motion.div>
 
@@ -144,7 +260,6 @@ export default function LoginPage() {
                   <Mail className="w-5 h-5 text-warmDark/55" />
                   <span className="font-sans text-warmDark group-hover:text-warmDark/80">Sign in with Email</span>
                 </button>
-
               </motion.div>
 
               <motion.p className="mt-6 text-warmDark/35 text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
@@ -173,54 +288,31 @@ export default function LoginPage() {
               <div className="space-y-4">
                 <div>
                   <label className="font-handwriting text-warmDark/50 text-base block mb-2">Your name</label>
-                  <input
-                    type="text"
-                    value={signupName}
-                    onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="Jane Smith"
-                    autoFocus
-                    className="w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
-                  />
+                  <input type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="Jane Smith" autoFocus className={inputClass} />
                 </div>
-
                 <div>
                   <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
-                  <input
-                    type="email"
-                    value={signupEmail}
-                    onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
-                  />
+                  <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="you@example.com" className={inputClass} />
                 </div>
-
                 <div>
                   <label className="font-handwriting text-warmDark/50 text-base block mb-2">Password</label>
                   <div className="relative">
-                    <input
-                      type={showSignupPassword ? 'text' : 'password'}
-                      value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
-                    />
+                    <input type={showSignupPassword ? 'text' : 'password'} value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)} placeholder="At least 6 characters"
+                      className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
                     <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
                       {showSignupPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
-
                 <div>
                   <label className="font-handwriting text-warmDark/50 text-base block mb-2">Confirm password</label>
-                  <input
-                    type="password"
-                    value={signupConfirm}
-                    onChange={(e) => setSignupConfirm(e.target.value)}
+                  <input type="password" value={signupConfirm} onChange={(e) => setSignupConfirm(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSignup()}
-                    placeholder="Repeat your password"
-                    className="w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
-                  />
+                    placeholder="Repeat your password" className={inputClass} />
                 </div>
 
                 {signupError && (
@@ -230,13 +322,9 @@ export default function LoginPage() {
                   </motion.p>
                 )}
 
-                <motion.button
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  onClick={handleSignup}
-                  disabled={loading}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60"
-                >
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                  onClick={handleSignup} disabled={loading}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
                   {loading ? 'Creating account…' : 'Create account'}
                 </motion.button>
 
@@ -271,16 +359,17 @@ export default function LoginPage() {
                   <motion.div key="email-input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
                     <div>
                       <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                      <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLoginError('') }}
                         onKeyDown={(e) => e.key === 'Enter' && handleEmailNext()}
-                        placeholder="you@example.com"
-                        autoFocus
-                        className="w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50"
-                      />
+                        placeholder="you@example.com" autoFocus
+                        className={`w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans outline-none transition-all border ${loginError ? 'border-coral/50 focus:ring-2 focus:ring-coral/30' : 'border-white/50 focus:ring-2 focus:ring-gold/30'}`} />
                     </div>
+                    {loginError && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                        {loginError}
+                      </motion.p>
+                    )}
                     <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={handleEmailNext}
                       className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg">
                       Continue
@@ -311,25 +400,236 @@ export default function LoginPage() {
                     </div>
 
                     {loginError && (
+                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                        {loginError === '__noAccount__' ? (
+                          <span>
+                            No account found with this email.{' '}
+                            <button onClick={() => { setScreen('signup'); setSignupEmail(email); setLoginError('') }}
+                              className="underline font-medium hover:text-coral/70">
+                              Sign up instead
+                            </button>
+                          </span>
+                        ) : loginError}
+                      </motion.div>
+                    )}
+
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                      onClick={handleEmailLogin} disabled={loading}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                      {loading ? 'Signing in…' : 'Sign in'}
+                    </motion.button>
+
+                    <div className="flex items-center justify-between">
+                      <button onClick={() => { setEmailStep('enter'); setLoginError('') }}
+                        className="text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
+                        Use a different email
+                      </button>
+                      <button
+                        onClick={() => { setForgotEmail(email); setForgotStep('email'); setScreen('forgot') }}
+                        className="text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
+                        Forgot password?
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* ===== VERIFY EMAIL SCREEN ===== */}
+          {screen === 'verify' && (
+            <motion.div
+              key="verify"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.4 }}
+            >
+              <h2 className="font-serif text-3xl text-warmDark mb-2">Verify your email</h2>
+              <p className="font-handwriting text-lg text-warmDark/55 mb-8">
+                We sent a 6-digit code to your email. Enter it below.
+              </p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="font-handwriting text-warmDark/50 text-base block mb-2">Verification code</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={verifyCode}
+                    onChange={(e) => { setVerifyCode(e.target.value.replace(/\D/g, '')); setVerifyError('') }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                    placeholder="000000"
+                    autoFocus
+                    className={codeInputClass}
+                  />
+                </div>
+
+                {verifyError && (
+                  <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                    {verifyError}
+                  </motion.p>
+                )}
+
+                {resendMsg && (
+                  <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2">
+                    {resendMsg}
+                  </motion.p>
+                )}
+
+                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                  onClick={handleVerify} disabled={loading || verifyCode.length < 6}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                  {loading ? 'Verifying…' : 'Verify email'}
+                </motion.button>
+
+                <button onClick={handleResend} disabled={resendLoading}
+                  className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors disabled:opacity-50">
+                  {resendLoading ? 'Sending…' : "Didn't receive it? Resend code"}
+                </button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ===== FORGOT PASSWORD SCREEN ===== */}
+          {screen === 'forgot' && (
+            <motion.div
+              key="forgot"
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -40 }}
+              transition={{ duration: 0.4 }}
+            >
+              <button onClick={() => { setScreen('email'); setEmailStep('password'); setForgotError('') }}
+                className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 mb-8 transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm">Back</span>
+              </button>
+
+              <h2 className="font-serif text-3xl text-warmDark mb-2">Reset password</h2>
+
+              <AnimatePresence mode="wait">
+                {/* Step 1: Enter email */}
+                {forgotStep === 'email' && (
+                  <motion.div key="forgot-email" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">Enter your email and we'll send a reset code.</p>
+                    <div>
+                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
+                      <input type="email" value={forgotEmail} onChange={(e) => { setForgotEmail(e.target.value); setForgotError('') }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleForgotSend()}
+                        placeholder="you@example.com" autoFocus className={inputClass} />
+                    </div>
+
+                    {forgotError && (
                       <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                         className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
-                        {loginError}
+                        {forgotError}
                       </motion.p>
                     )}
 
-                    <motion.button
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                      onClick={handleEmailLogin}
-                      disabled={loading}
-                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60"
-                    >
-                      {loading ? 'Signing in…' : 'Sign in'}
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                      onClick={handleForgotSend} disabled={loading}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                      {loading ? 'Sending…' : 'Send reset code'}
                     </motion.button>
-                    <button onClick={() => { setEmailStep('enter'); setLoginError('') }}
+                  </motion.div>
+                )}
+
+                {/* Step 2: Enter code */}
+                {forgotStep === 'code' && (
+                  <motion.div key="forgot-code" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">
+                      Check your email for the 6-digit code.
+                    </p>
+                    <div>
+                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Reset code</label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={forgotCode}
+                        onChange={(e) => { setForgotCode(e.target.value.replace(/\D/g, '')); setForgotError('') }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleForgotVerifyCode()}
+                        placeholder="000000"
+                        autoFocus
+                        className={codeInputClass}
+                      />
+                    </div>
+
+                    {forgotError && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                        {forgotError}
+                      </motion.p>
+                    )}
+
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                      onClick={handleForgotVerifyCode} disabled={forgotCode.length < 6}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                      Continue
+                    </motion.button>
+
+                    <button onClick={() => { setForgotStep('email'); setForgotCode('') }}
                       className="w-full text-center text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
                       Use a different email
                     </button>
+                  </motion.div>
+                )}
+
+                {/* Step 3: New password */}
+                {forgotStep === 'newpass' && !forgotSuccess && (
+                  <motion.div key="forgot-newpass" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">Enter your new password.</p>
+                    <div>
+                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">New password</label>
+                      <div className="relative">
+                        <input type={showForgotPass ? 'text' : 'password'} value={forgotNewPass}
+                          onChange={(e) => { setForgotNewPass(e.target.value); setForgotError('') }}
+                          placeholder="At least 6 characters" autoFocus
+                          className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
+                        <button type="button" onClick={() => setShowForgotPass(!showForgotPass)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
+                          {showForgotPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Confirm password</label>
+                      <input type="password" value={forgotConfirm}
+                        onChange={(e) => { setForgotConfirm(e.target.value); setForgotError('') }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()}
+                        placeholder="Repeat new password" className={inputClass} />
+                    </div>
+
+                    {forgotError && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                        {forgotError}
+                      </motion.p>
+                    )}
+
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                      onClick={handleForgotReset} disabled={loading}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                      {loading ? 'Saving…' : 'Set new password'}
+                    </motion.button>
+                  </motion.div>
+                )}
+
+                {/* Success */}
+                {forgotSuccess && (
+                  <motion.div key="forgot-success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6">
+                    <div className="text-5xl">🎉</div>
+                    <p className="font-handwriting text-xl text-warmDark/70">Password updated successfully!</p>
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                      onClick={() => { setScreen('email'); setEmailStep('password'); setForgotSuccess(false) }}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg">
+                      Sign in
+                    </motion.button>
                   </motion.div>
                 )}
               </AnimatePresence>

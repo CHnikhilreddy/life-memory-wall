@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus } from 'lucide-react'
+import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
 import { MemorySpace } from '../types'
@@ -131,7 +131,7 @@ const spaceColors = [
 type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'change-password'
 
 export default function SpaceSelector() {
-  const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite } = useStore()
+  const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, leaveSpace, removeMember, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite } = useStore()
   const visibleSpaces = getVisibleSpaces()
 
   const [modal, setModal] = useState<Modal>('none')
@@ -143,6 +143,20 @@ export default function SpaceSelector() {
 
   // Edit-mode for spaces page
   const [editPageMode, setEditPageMode] = useState(false)
+  const spacesContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!editPageMode) return
+    const handleMouseDown = (e: MouseEvent) => {
+      if (spacesContainerRef.current && !spacesContainerRef.current.contains(e.target as Node)) {
+        setEditPageMode(false)
+        setDeleteConfirmId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [editPageMode])
+
   const [editingSpaceId, setEditingSpaceId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editEmoji, setEditEmoji] = useState('✨')
@@ -158,6 +172,12 @@ export default function SpaceSelector() {
   const [pwError, setPwError] = useState('')
   const [pwSuccess, setPwSuccess] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
+
+  // Members management
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const [leaveConfirm, setLeaveConfirm] = useState(false)
+  const [leaveLoading, setLeaveLoading] = useState(false)
+  const [memberActionError, setMemberActionError] = useState('')
 
   // Profile Menu
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -199,7 +219,7 @@ export default function SpaceSelector() {
   const handleSaveSpace = async () => {
     if (!editTitle.trim() || !editingSpaceId) return
     await updateSpace(editingSpaceId, { title: editTitle.trim(), coverEmoji: editEmoji })
-    setModal('none'); setEditingSpaceId(null)
+    setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
   const handleDeleteSpace = async (spaceId: string) => {
@@ -236,6 +256,7 @@ export default function SpaceSelector() {
     setOldPassword(''); setNewPassword(''); setConfirmPassword('')
     setPwError(''); setPwSuccess(false)
     setShowProfileMenu(false)
+    setRemovingMemberId(null); setLeaveConfirm(false); setMemberActionError('')
   }
 
   if (loading) {
@@ -465,7 +486,7 @@ export default function SpaceSelector() {
         </motion.div>
 
         {/* Space bubbles */}
-        <div className="flex flex-wrap justify-center gap-8 md:gap-10 max-w-5xl mb-12">
+        <div ref={spacesContainerRef} className="flex flex-wrap justify-center gap-8 md:gap-10 max-w-5xl mb-12">
           {visibleSpaces.map((space, i) => {
             const isOwner = space.createdBy === currentUser?.id
             const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role
@@ -658,7 +679,7 @@ export default function SpaceSelector() {
                         </button>
                       </div>
                       {newType === 'group' && (
-                        <p className="text-xs text-warmDark/40 mt-2 font-sans">A unique invite code will be generated. Members must be approved by you or an admin.</p>
+                        <p className="text-xs text-warmDark/40 mt-2 font-sans">Invite members by email. They can accept or decline from the app.</p>
                       )}
                     </div>
                     <div className="flex gap-3 pt-2">
@@ -800,44 +821,126 @@ export default function SpaceSelector() {
               )}
 
               {/* MEMBERS */}
-              {modal === 'members' && viewingSpace && (
-                <>
-                  <div className="mb-6">
-                    <h2 className="font-serif text-2xl text-warmDark flex items-center gap-2">
-                      <span>{viewingSpace.coverEmoji}</span> {viewingSpace.title}
-                    </h2>
-                    <p className="font-handwriting text-warmDark/50 mt-1">
-                      {viewingSpace.membersList.filter((m) => m.status === 'active').length} members
-                    </p>
-                  </div>
+              {modal === 'members' && viewingSpace && (() => {
+                const myRole = viewingSpace.membersList.find((m) => m.userId === currentUser?.id)?.role
+                const canManage = myRole === 'owner' || myRole === 'admin'
+                const activeMembers = viewingSpace.membersList
+                  .filter((m) => m.status === 'active')
+                  .sort((a, b) => ({ owner: 0, admin: 1, member: 2 }[a.role] - { owner: 0, admin: 1, member: 2 }[b.role]))
 
-                  {/* Members list */}
-                  <div className="space-y-2">
-                    {viewingSpace.membersList
-                      .filter((m) => m.status === 'active')
-                      .sort((a, b) => ({ owner: 0, admin: 1, member: 2 }[a.role] - { owner: 0, admin: 1, member: 2 }[b.role]))
-                      .map((member) => (
-                        <div key={member.userId} className="flex items-center justify-between py-3 px-4 rounded-xl hover:bg-white/20 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center">
+                const handleRemove = async (userId: string) => {
+                  setRemovingMemberId(userId)
+                  setMemberActionError('')
+                  try {
+                    await removeMember(viewingSpace.id, userId)
+                  } catch (err: any) {
+                    setMemberActionError(err.message || 'Failed to remove member')
+                  } finally {
+                    setRemovingMemberId(null)
+                  }
+                }
+
+                const handleLeave = async () => {
+                  setLeaveLoading(true)
+                  setMemberActionError('')
+                  try {
+                    await leaveSpace(viewingSpace.id)
+                    closeModal()
+                  } catch (err: any) {
+                    setMemberActionError(err.message || 'Failed to leave group')
+                    setLeaveLoading(false)
+                    setLeaveConfirm(false)
+                  }
+                }
+
+                return (
+                  <>
+                    <div className="mb-6">
+                      <h2 className="font-serif text-2xl text-warmDark flex items-center gap-2">
+                        <span>{viewingSpace.coverEmoji}</span> {viewingSpace.title}
+                      </h2>
+                      <p className="font-handwriting text-warmDark/50 mt-1">
+                        {activeMembers.length} members
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      {activeMembers.map((member) => (
+                        <div key={member.userId} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-white/20 transition-colors group">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center flex-shrink-0">
                               <span className="font-serif text-sm text-warmDark">{member.name[0]}</span>
                             </div>
-                            <div>
-                              <p className="font-sans text-sm text-warmDark">
+                            <div className="min-w-0">
+                              <p className="font-sans text-sm text-warmDark truncate">
                                 {member.name}
                                 {member.userId === currentUser?.id && <span className="text-warmDark/40 ml-1">(you)</span>}
                               </p>
                               <p className="text-xs text-warmDark/40">Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
                             </div>
                           </div>
-                          {member.role === 'owner' && <span className="flex items-center gap-1 text-xs text-gold bg-gold/10 px-2 py-1 rounded-full"><Crown className="w-3 h-3" /> Owner</span>}
-                          {member.role === 'admin' && <span className="flex items-center gap-1 text-xs text-teal bg-teal/10 px-2 py-1 rounded-full"><Shield className="w-3 h-3" /> Admin</span>}
-                          {member.role === 'member' && <span className="text-xs text-warmDark/35">Member</span>}
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                            {member.role === 'owner' && <span className="flex items-center gap-1 text-xs text-gold bg-gold/10 px-2 py-1 rounded-full"><Crown className="w-3 h-3" /> Owner</span>}
+                            {member.role === 'admin' && <span className="flex items-center gap-1 text-xs text-teal bg-teal/10 px-2 py-1 rounded-full"><Shield className="w-3 h-3" /> Admin</span>}
+                            {member.role === 'member' && !canManage && <span className="text-xs text-warmDark/35">Member</span>}
+                            {/* Remove button — shown to owner/admin for other non-owner members */}
+                            {canManage && member.userId !== currentUser?.id && member.role !== 'owner' && (
+                              removingMemberId === member.userId ? (
+                                <div className="flex items-center gap-1.5">
+                                  <button onClick={() => handleRemove(member.userId)}
+                                    className="text-xs text-coral font-medium hover:text-coral/70 transition-colors">Remove</button>
+                                  <button onClick={() => setRemovingMemberId(null)}
+                                    className="text-xs text-warmDark/40 hover:text-warmDark/60 transition-colors">Cancel</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setRemovingMemberId(member.userId)}
+                                  className="w-7 h-7 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-warmDark/30 hover:text-coral/70 hover:bg-coral/10 transition-all"
+                                  title="Remove member"
+                                >
+                                  <UserMinus className="w-3.5 h-3.5" />
+                                </button>
+                              )
+                            )}
+                          </div>
                         </div>
                       ))}
-                  </div>
-                </>
-              )}
+                    </div>
+
+                    {memberActionError && (
+                      <p className="text-xs text-coral font-sans mt-3 px-1">{memberActionError}</p>
+                    )}
+
+                    {/* Leave group — for non-owners */}
+                    {myRole && myRole !== 'owner' && (
+                      <div className="mt-5 pt-4 border-t border-warmMid/10">
+                        {!leaveConfirm ? (
+                          <button
+                            onClick={() => setLeaveConfirm(true)}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-coral/70 hover:text-coral hover:bg-coral/8 transition-colors text-sm font-sans"
+                          >
+                            <LogOut className="w-4 h-4" /> Leave group
+                          </button>
+                        ) : (
+                          <div className="text-center space-y-3">
+                            <p className="text-sm text-warmDark/70 font-sans">Leave <strong>{viewingSpace.title}</strong>?</p>
+                            <div className="flex gap-2">
+                              <button onClick={() => setLeaveConfirm(false)} disabled={leaveLoading}
+                                className="flex-1 py-2.5 rounded-xl text-warmDark/50 hover:bg-white/30 transition-all text-sm font-sans">
+                                Cancel
+                              </button>
+                              <button onClick={handleLeave} disabled={leaveLoading}
+                                className="flex-1 py-2.5 rounded-xl bg-coral/80 text-white text-sm font-sans disabled:opacity-60 flex items-center justify-center gap-2">
+                                {leaveLoading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Leaving…</> : 'Leave'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </motion.div>
           </motion.div>
         )}

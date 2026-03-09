@@ -25,7 +25,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
-    throw new Error(body.error || `Request failed: ${res.status}`)
+    const err = new Error(body.error || `Request failed: ${res.status}`) as any
+    Object.assign(err, body)
+    throw err
   }
 
   return res.json()
@@ -63,6 +65,9 @@ export const api = {
 
   inviteByEmail: (spaceId: string, email: string) =>
     request<{ success: boolean; message: string }>(`/spaces/${spaceId}/invite`, { method: 'POST', body: JSON.stringify({ email }) }),
+
+  leaveSpace: (spaceId: string) =>
+    request<{ success: boolean }>(`/spaces/${spaceId}/leave`, { method: 'POST' }),
 
   removeMember: (spaceId: string, userId: string) =>
     request<any>(`/spaces/${spaceId}/members/${userId}`, { method: 'DELETE' }),
@@ -103,6 +108,18 @@ export const api = {
 
   changePassword: (oldPassword: string, newPassword: string) =>
     request<{ success: boolean }>('/auth/change-password', { method: 'POST', body: JSON.stringify({ oldPassword, newPassword }) }),
+
+  sendVerification: (userId: string) =>
+    request<{ success: boolean }>('/auth/send-verification', { method: 'POST', body: JSON.stringify({ userId }) }),
+
+  verifyEmail: (userId: string, code: string) =>
+    request<{ user: any; token: string }>('/auth/verify-email', { method: 'POST', body: JSON.stringify({ userId, code }) }),
+
+  forgotPassword: (email: string) =>
+    request<{ success: boolean }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  resetPassword: (email: string, code: string, newPassword: string) =>
+    request<{ success: boolean }>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, newPassword }) }),
 
   // Invites — user side
   getMyInvites: () =>

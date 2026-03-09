@@ -1,5 +1,5 @@
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, Send, Copy, Check, Mail, Loader2, X } from 'lucide-react'
+import { ArrowLeft, Users, Send, Check, Mail, Loader2, X, UserMinus, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
@@ -10,7 +10,7 @@ import CreateMemoryModal from './CreateMemoryModal'
 import FloatingNav from './FloatingNav'
 
 export default function Timeline() {
-  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser } =
+  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser, removeMember, leaveSpace } =
     useStore()
   const [showCreate, setShowCreate] = useState(false)
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null)
@@ -29,10 +29,13 @@ export default function Timeline() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteStatus, setInviteStatus] = useState<{ ok: boolean; msg: string } | null>(null)
   const [inviting, setInviting] = useState(false)
-  const [codeCopied, setCodeCopied] = useState(false)
   const [pendingInvitesList, setPendingInvitesList] = useState<SpacePendingInvite[]>([])
   const [invitesLoading, setInvitesLoading] = useState(false)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const [leaveConfirm, setLeaveConfirm] = useState(false)
+  const [leaveLoading, setLeaveLoading] = useState(false)
+  const [memberActionError, setMemberActionError] = useState('')
 
 
   const { scrollYProgress } = useScroll()
@@ -129,7 +132,7 @@ export default function Timeline() {
   }
 
   const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role
-  const canInvite = myRole === 'owner' || myRole === 'admin'
+  const canInvite = (myRole === 'owner' || myRole === 'admin') && space.type === 'group'
   const allActiveMembers = space.membersList.filter((m) => m.status === 'active')
 
   // Members visible for the currently selected memory
@@ -155,14 +158,7 @@ export default function Timeline() {
     }
   }
 
-  const handleCopyCode = () => {
-    if (!space.inviteCode) return
-    navigator.clipboard.writeText(space.inviteCode)
-    setCodeCopied(true)
-    setTimeout(() => setCodeCopied(false), 2000)
-  }
-
-  const loadPendingInvites = async () => {
+const loadPendingInvites = async () => {
     if (!canInvite) return
     setInvitesLoading(true)
     try {
@@ -183,21 +179,6 @@ export default function Timeline() {
 
   const InviteSection = canInvite ? (
     <div className="mt-4 pt-4 border-t border-warmMid/10 space-y-3">
-      {space.inviteCode && (
-        <div>
-          <p className="font-sans text-xs text-warmDark/50 mb-1.5">Invite code</p>
-          <div className="flex items-center gap-2 bg-white/40 rounded-xl px-3 py-2">
-            <span className="font-mono text-sm text-warmDark tracking-widest flex-1">{space.inviteCode}</span>
-            <button
-              onClick={handleCopyCode}
-              className="text-warmDark/40 hover:text-warmDark transition-colors flex-shrink-0"
-              title="Copy code"
-            >
-              {codeCopied ? <Check className="w-3.5 h-3.5 text-teal" /> : <Copy className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-        </div>
-      )}
       <div>
         <p className="font-sans text-xs text-warmDark/50 mb-1.5">Invite by email</p>
         <div className="flex gap-2">
@@ -226,18 +207,58 @@ export default function Timeline() {
     </div>
   ) : null
 
-  const renderMembersList = (members: typeof allActiveMembers) => (
-    <ul className="space-y-2">
+  const handleRemoveMember = async (userId: string) => {
+    if (!space) return
+    setRemovingMemberId(userId)
+    setMemberActionError('')
+    try {
+      await removeMember(space.id, userId)
+    } catch (err: any) {
+      setMemberActionError(err.message || 'Failed to remove member')
+    } finally {
+      setRemovingMemberId(null)
+    }
+  }
+
+  const handleLeaveSpace = async () => {
+    if (!space) return
+    setLeaveLoading(true)
+    setMemberActionError('')
+    try {
+      await leaveSpace(space.id)
+    } catch (err: any) {
+      setMemberActionError(err.message || 'Failed to leave group')
+      setLeaveLoading(false)
+      setLeaveConfirm(false)
+    }
+  }
+
+  const renderMembersList = (members: typeof allActiveMembers, showActions = false) => (
+    <ul className="space-y-1.5">
       {members.map((m) => (
-        <li key={m.userId} className="flex items-center gap-2">
+        <li key={m.userId} className="flex items-center gap-2 group">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-xs font-serif text-warmDark flex-shrink-0">
             {m.name[0]}
           </div>
-          <span className="font-sans text-sm text-warmDark/80 flex-1">
+          <span className="font-sans text-sm text-warmDark/80 flex-1 min-w-0 truncate">
             {m.name}{m.userId === currentUser?.id && <span className="text-warmDark/40 ml-1 text-xs">(you)</span>}
           </span>
-          {m.role === 'owner' && <span className="text-xs text-gold">owner</span>}
-          {m.role === 'admin' && <span className="text-xs text-teal">admin</span>}
+          {m.role === 'owner' && <span className="text-xs text-gold flex-shrink-0">owner</span>}
+          {m.role === 'admin' && <span className="text-xs text-teal flex-shrink-0">admin</span>}
+          {showActions && canInvite && m.userId !== currentUser?.id && m.role !== 'owner' && (
+            removingMemberId === m.userId ? (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button onClick={() => handleRemoveMember(m.userId)} className="text-[10px] text-coral font-medium">Remove</button>
+                <button onClick={() => setRemovingMemberId(null)} className="text-[10px] text-warmDark/40">Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setRemovingMemberId(m.userId)}
+                className="w-5 h-5 rounded-full flex items-center justify-center text-warmDark/20 opacity-0 group-hover:opacity-100 hover:text-coral/70 hover:bg-coral/10 transition-all flex-shrink-0"
+                title="Remove member">
+                <UserMinus className="w-3 h-3" />
+              </button>
+            )
+          )}
         </li>
       ))}
     </ul>
@@ -284,8 +305,34 @@ export default function Timeline() {
         <div className="p-4">
           {membersTab === 'members' ? (
             <>
-              {renderMembersList(allActiveMembers)}
+              {renderMembersList(allActiveMembers, true)}
+              {memberActionError && (
+                <p className="text-xs text-coral font-sans mt-2">{memberActionError}</p>
+              )}
               {InviteSection}
+              {/* Leave group — for non-owners in group spaces */}
+              {space.type === 'group' && myRole && myRole !== 'owner' && (
+                <div className="mt-4 pt-3 border-t border-warmMid/10">
+                  {!leaveConfirm ? (
+                    <button onClick={() => setLeaveConfirm(true)}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-coral/70 hover:text-coral hover:bg-coral/8 transition-colors text-xs font-sans">
+                      <LogOut className="w-3.5 h-3.5" /> Leave group
+                    </button>
+                  ) : (
+                    <div className="text-center space-y-2">
+                      <p className="text-xs text-warmDark/70 font-sans">Leave <strong>{space.title}</strong>?</p>
+                      <div className="flex gap-2">
+                        <button onClick={() => setLeaveConfirm(false)} disabled={leaveLoading}
+                          className="flex-1 py-2 rounded-xl text-warmDark/50 hover:bg-white/30 transition-all text-xs font-sans">Cancel</button>
+                        <button onClick={handleLeaveSpace} disabled={leaveLoading}
+                          className="flex-1 py-2 rounded-xl bg-coral/80 text-white text-xs font-sans disabled:opacity-60 flex items-center justify-center gap-1">
+                          {leaveLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Leaving…</> : 'Leave'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             invitesLoading ? (

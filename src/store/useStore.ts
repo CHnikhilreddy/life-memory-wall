@@ -36,6 +36,7 @@ interface AppState {
   deleteSpace: (spaceId: string) => Promise<void>
   updateSubstory: (spaceId: string, memoryId: string, substoryId: string, data: Partial<SubStory>) => Promise<void>
   deleteSubstory: (spaceId: string, memoryId: string, substoryId: string) => Promise<void>
+  leaveSpace: (spaceId: string) => Promise<void>
   removeMember: (spaceId: string, userId: string) => Promise<void>
   updateMemberRole: (spaceId: string, userId: string, role: SpaceMember['role']) => Promise<void>
 }
@@ -60,8 +61,11 @@ export const useStore = create<AppState>((set, get) => ({
       const result = await api.login({ id: token })
       setToken(result.token)
       set({ isLoggedIn: true, currentUser: result.user })
-      localStorage.removeItem('activeSpaceId')
+      const savedSpaceId = localStorage.getItem('activeSpaceId')
       await Promise.all([get().fetchSpaces(), get().fetchMyInvites()])
+      if (savedSpaceId) {
+        await get().setActiveSpace(savedSpaceId)
+      }
       set({ initialized: true })
     } catch {
       clearToken()
@@ -306,6 +310,16 @@ export const useStore = create<AppState>((set, get) => ({
         } : state.activeSpaceData,
       }))
     } catch (err) { console.error('Failed to delete substory:', err) }
+  },
+
+  leaveSpace: async (spaceId) => {
+    await api.leaveSpace(spaceId)
+    localStorage.removeItem('activeSpaceId')
+    set((state) => ({
+      spaces: state.spaces.filter((s) => s.id !== spaceId),
+      activeSpaceId: state.activeSpaceId === spaceId ? null : state.activeSpaceId,
+      activeSpaceData: state.activeSpaceData?.id === spaceId ? null : state.activeSpaceData,
+    }))
   },
 
   removeMember: async (spaceId, userId) => {
