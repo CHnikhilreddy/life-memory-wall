@@ -58,8 +58,7 @@ export const useStore = create<AppState>((set, get) => ({
       return
     }
     try {
-      const result = await api.login({ id: token })
-      setToken(result.token)
+      const result = await api.me()
       set({ isLoggedIn: true, currentUser: result.user })
       const savedSpaceId = localStorage.getItem('activeSpaceId')
       await Promise.all([get().fetchSpaces(), get().fetchMyInvites()])
@@ -76,7 +75,6 @@ export const useStore = create<AppState>((set, get) => ({
 
   login: async (user) => {
     const result = await api.login({
-      id: user?.id,
       email: user?.email,
       phone: user?.phone,
       name: user?.name,
