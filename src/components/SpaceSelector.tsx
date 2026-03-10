@@ -65,6 +65,7 @@ export default function SpaceSelector() {
   const [editIcon, setEditIcon] = useState('couple')
   const [editIconVariation, setEditIconVariation] = useState(0)
   const [editColor, setEditColor] = useState('purple-pink')
+  const [editDescription, setEditDescription] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [showInvites, setShowInvites] = useState(false)
@@ -132,13 +133,14 @@ export default function SpaceSelector() {
       setEditIconVariation(0)
     }
     setEditColor(space.coverColor || 'purple-pink')
+    setEditDescription(space.description || '')
     setModal('edit-space')
   }
 
   const handleSaveSpace = async () => {
     if (!editTitle.trim() || !editingSpaceId) return
     const iconId = makeIconId(editIcon, editIconVariation)
-    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverIcon: iconId, coverColor: editColor })
+    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverIcon: iconId, coverColor: editColor, description: editDescription.trim() || undefined })
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
@@ -539,7 +541,7 @@ export default function SpaceSelector() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="glass rounded-3xl p-8 w-full max-w-md relative z-10 max-h-[85vh] overflow-y-auto"
+              className="glass rounded-3xl p-8 w-full max-w-lg relative z-10 max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <button onClick={closeModal} className="absolute top-4 right-4 text-warmDark/75 hover:text-warmDark/70 transition-colors">
@@ -558,15 +560,15 @@ export default function SpaceSelector() {
                         className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
                     </div>
 
-                    {/* Icon preview */}
-                    <div className="flex items-center gap-4">
-                      <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getColorClasses(newColor)} flex items-center justify-center border border-white/50 shadow-md flex-shrink-0`}>
-                        <SpaceIconRenderer iconId={makeIconId(newIcon, newIconVariation)} size="md" />
+                    {/* Icon preview — centered */}
+                    <div className="flex flex-col items-center gap-3">
+                      <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${getColorClasses(newColor)} flex items-center justify-center border border-white/50 shadow-lg overflow-hidden`}>
+                        <SpaceIconRenderer iconId={makeIconId(newIcon, newIconVariation)} size="full" />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-handwriting text-warmDark/75 text-sm italic">{newDescription}</p>
+                      <div className="text-center">
+                        <p className="font-handwriting text-warmDark/70 text-lg italic">{newDescription}</p>
                         <button type="button" onClick={() => setNewDescription(randomTaglineForIcon(newIcon))}
-                          className="text-sm font-sans text-warmDark/70 hover:text-warmDark/70 transition-colors mt-1">
+                          className="text-sm font-sans text-warmDark/60 hover:text-warmDark/80 transition-colors mt-1">
                           ↻ shuffle tagline
                         </button>
                       </div>
@@ -575,11 +577,11 @@ export default function SpaceSelector() {
                     {/* Icon picker */}
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Choose an icon</label>
-                      <div className="max-h-52 overflow-y-auto space-y-3 pr-1">
+                      <div className="max-h-60 overflow-y-auto space-y-4 pr-1">
                         {iconCategories.map((cat) => (
                           <div key={cat}>
-                            <p className="font-sans text-sm text-warmDark/70 uppercase tracking-wider mb-1.5">{cat}</p>
-                            <div className="flex flex-wrap gap-1.5">
+                            <p className="font-sans text-sm text-warmDark/70 uppercase tracking-wider mb-2">{cat}</p>
+                            <div className="flex flex-wrap gap-2">
                               {getIconsByCategory(cat).map((iconDef) => {
                                 const isSelected = newIcon === iconDef.id
                                 return [0, 1, 2].map((v) => {
@@ -587,10 +589,10 @@ export default function SpaceSelector() {
                                   return (
                                     <button key={`${iconDef.id}-${v}`}
                                       onClick={() => { setNewIcon(iconDef.id); setNewIconVariation(v); setNewDescription(randomTaglineForIcon(iconDef.id)) }}
-                                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isThisVariation ? 'bg-gold/25 ring-2 ring-gold/50 scale-110' : isSelected && v === 0 ? '' : 'bg-white/30 hover:bg-white/50'}`}
+                                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all overflow-hidden ${isThisVariation ? 'ring-2 ring-gold/60 scale-110' : 'hover:scale-105'}`}
                                       title={`${iconDef.name}${v > 0 ? ` (style ${v + 1})` : ''}`}
                                     >
-                                      <div className="w-7 h-7">
+                                      <div className="w-14 h-14 rounded-full overflow-hidden">
                                         <iconDef.component accent={v} />
                                       </div>
                                     </button>
@@ -603,18 +605,6 @@ export default function SpaceSelector() {
                       </div>
                     </div>
 
-                    {/* Color picker */}
-                    <div>
-                      <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Background color</label>
-                      <div className="flex flex-wrap gap-2">
-                        {iconColors.map((color) => (
-                          <button key={color.id} onClick={() => setNewColor(color.id)}
-                            className={`w-8 h-8 rounded-full bg-gradient-to-br ${color.classes} border-2 transition-all ${newColor === color.id ? 'border-gold scale-110 shadow-md' : 'border-white/50 hover:scale-105'}`}
-                            title={color.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">What kind of space?</label>
                       <div className="flex gap-3">
@@ -653,22 +643,28 @@ export default function SpaceSelector() {
                         className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
                     </div>
 
-                    {/* Icon preview */}
-                    <div className="flex items-center gap-4">
-                      <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${getColorClasses(editColor)} flex items-center justify-center border border-white/50 shadow-md flex-shrink-0`}>
-                        <SpaceIconRenderer iconId={makeIconId(editIcon, editIconVariation)} size="md" />
+                    {/* Icon preview — centered */}
+                    <div className="flex flex-col items-center gap-3">
+                      <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${getColorClasses(editColor)} flex items-center justify-center border border-white/50 shadow-lg overflow-hidden`}>
+                        <SpaceIconRenderer iconId={makeIconId(editIcon, editIconVariation)} size="full" />
                       </div>
-                      <p className="font-sans text-sm text-warmDark/75">{getIconDef(editIcon)?.name || 'Icon'}</p>
+                      <div className="text-center">
+                        <p className="font-handwriting text-warmDark/70 text-lg italic">{editDescription || 'No tagline set'}</p>
+                        <button type="button" onClick={() => setEditDescription(randomTaglineForIcon(editIcon))}
+                          className="text-sm font-sans text-warmDark/60 hover:text-warmDark/80 transition-colors mt-1">
+                          ↻ shuffle tagline
+                        </button>
+                      </div>
                     </div>
 
                     {/* Icon picker */}
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Icon</label>
-                      <div className="max-h-52 overflow-y-auto space-y-3 pr-1">
+                      <div className="max-h-60 overflow-y-auto space-y-4 pr-1">
                         {iconCategories.map((cat) => (
                           <div key={cat}>
-                            <p className="font-sans text-sm text-warmDark/70 uppercase tracking-wider mb-1.5">{cat}</p>
-                            <div className="flex flex-wrap gap-1.5">
+                            <p className="font-sans text-sm text-warmDark/70 uppercase tracking-wider mb-2">{cat}</p>
+                            <div className="flex flex-wrap gap-2">
                               {getIconsByCategory(cat).map((iconDef) => {
                                 const isSelected = editIcon === iconDef.id
                                 return [0, 1, 2].map((v) => {
@@ -676,10 +672,10 @@ export default function SpaceSelector() {
                                   return (
                                     <button key={`${iconDef.id}-${v}`}
                                       onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(v) }}
-                                      className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isThisVariation ? 'bg-gold/25 ring-2 ring-gold/50 scale-110' : 'bg-white/30 hover:bg-white/50'}`}
+                                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all overflow-hidden ${isThisVariation ? 'ring-2 ring-gold/60 scale-110' : 'hover:scale-105'}`}
                                       title={`${iconDef.name}${v > 0 ? ` (style ${v + 1})` : ''}`}
                                     >
-                                      <div className="w-7 h-7">
+                                      <div className="w-14 h-14 rounded-full overflow-hidden">
                                         <iconDef.component accent={v} />
                                       </div>
                                     </button>
@@ -688,19 +684,6 @@ export default function SpaceSelector() {
                               })}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Color picker */}
-                    <div>
-                      <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Background color</label>
-                      <div className="flex flex-wrap gap-2">
-                        {iconColors.map((color) => (
-                          <button key={color.id} onClick={() => setEditColor(color.id)}
-                            className={`w-8 h-8 rounded-full bg-gradient-to-br ${color.classes} border-2 transition-all ${editColor === color.id ? 'border-gold scale-110 shadow-md' : 'border-white/50 hover:scale-105'}`}
-                            title={color.name}
-                          />
                         ))}
                       </div>
                     </div>
