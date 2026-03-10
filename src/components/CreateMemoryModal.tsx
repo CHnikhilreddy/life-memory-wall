@@ -111,7 +111,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-4 right-4 text-warmDark/40 hover:text-warmDark/70 transition-colors"
+                className="absolute top-4 right-4 text-warmDark/75 hover:text-warmDark/70 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -119,7 +119,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
               <h2 className="font-serif text-2xl text-warmDark mb-1">
                 {editMemory ? 'Edit this memory' : 'A new memory'}
               </h2>
-              <p className="font-handwriting text-lg text-warmDark/55 mb-8">
+              <p className="font-handwriting text-xl text-warmDark/75 mb-8">
                 {editMemory ? 'Change the details of this moment' : 'Write down this moment before it fades...'}
               </p>
 
@@ -131,13 +131,13 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Give this memory a title..."
-                    className="w-full font-serif text-xl text-warmDark bg-transparent border-b border-warmMid/10 pb-2 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/35"
+                    className="w-full font-serif text-xl text-warmDark bg-transparent border-b border-warmMid/10 pb-2 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/75"
                   />
                 </div>
 
                 {/* Date */}
                 <div>
-                  <label className="font-handwriting text-warmDark/55 text-lg block mb-1">
+                  <label className="font-handwriting text-warmDark/75 text-xl block mb-1">
                     When did this happen?
                   </label>
                   <input
@@ -150,7 +150,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
 
                 {/* Story */}
                 <div>
-                  <label className="font-handwriting text-warmDark/55 text-lg block mb-1">
+                  <label className="font-handwriting text-warmDark/75 text-xl block mb-1">
                     Tell the story
                   </label>
                   <textarea
@@ -164,7 +164,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
 
                 {/* Photo upload */}
                 <div>
-                  <label className="font-handwriting text-warmDark/55 text-lg block mb-2">
+                  <label className="font-handwriting text-warmDark/75 text-xl block mb-2">
                     Add photos
                   </label>
                   <input
@@ -192,7 +192,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                     </div>
                   )}
                   {uploading ? (
-                    <div className="flex items-center justify-center gap-2 text-warmDark/50 py-4">
+                    <div className="flex items-center justify-center gap-2 text-warmDark/75 py-4">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span className="text-sm">Uploading...</span>
                     </div>
@@ -203,16 +203,16 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                         onClick={() => fileInputRef.current?.click()}
                         className="border-2 border-dashed border-warmMid/15 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/30 transition-colors"
                       >
-                        <Upload className="w-5 h-5 text-warmDark/40" />
-                        <span className="text-xs text-warmDark/40">From Device</span>
+                        <Upload className="w-5 h-5 text-warmDark/75" />
+                        <span className="text-sm text-warmDark/75">From Device</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className="border-2 border-dashed border-warmMid/15 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/30 transition-colors"
                       >
-                        <Images className="w-5 h-5 text-warmDark/40" />
-                        <span className="text-xs text-warmDark/40">Google Photos</span>
+                        <Images className="w-5 h-5 text-warmDark/75" />
+                        <span className="text-sm text-warmDark/75">Google Photos</span>
                       </button>
                     </div>
                   )}
@@ -220,7 +220,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
 
                 {/* Location */}
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-warmDark/40" />
+                  <MapPin className="w-4 h-4 text-warmDark/75" />
                   <input
                     type="text"
                     value={location}
@@ -232,7 +232,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
 
                 {/* Tags */}
                 <div className="flex items-center gap-2">
-                  <Tag className="w-4 h-4 text-warmDark/40" />
+                  <Tag className="w-4 h-4 text-warmDark/75" />
                   <input
                     type="text"
                     value={tagsInput}
@@ -245,7 +245,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                 {/* Visibility — show whenever there are multiple members */}
                 {activeMembers.length > 1 && (
                   <div>
-                    <label className="font-handwriting text-warmDark/60 text-lg flex items-center gap-2 mb-3">
+                    <label className="font-handwriting text-warmDark/75 text-xl flex items-center gap-2 mb-3">
                       {visibleTo.length === 0
                         ? <Globe className="w-4 h-4 text-teal/60" />
                         : <Lock className="w-4 h-4 text-coral/60" />}
@@ -260,7 +260,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-sans transition-all ${
                           visibleTo.length === 0
                             ? 'bg-teal/10 border-teal/30 text-teal/80 font-medium'
-                            : 'bg-white/30 border-warmMid/15 text-warmDark/45 hover:border-warmMid/30'
+                            : 'bg-white/30 border-warmMid/15 text-warmDark/75 hover:border-warmMid/30'
                         }`}
                       >
                         <Globe className="w-4 h-4" />
@@ -277,7 +277,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                         className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-sans transition-all ${
                           visibleTo.length > 0
                             ? 'bg-coral/10 border-coral/30 text-coral/80 font-medium'
-                            : 'bg-white/30 border-warmMid/15 text-warmDark/45 hover:border-warmMid/30'
+                            : 'bg-white/30 border-warmMid/15 text-warmDark/75 hover:border-warmMid/30'
                         }`}
                       >
                         <Lock className="w-4 h-4" />
@@ -302,7 +302,7 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                                 checked ? 'bg-coral/70 border-coral/70' : 'border-warmMid/30 bg-white/50'
                               }`}>
-                                {checked && <span className="text-white text-xs font-bold">✓</span>}
+                                {checked && <span className="text-white text-sm font-bold">✓</span>}
                               </div>
                               <input
                                 type="checkbox"
@@ -323,11 +323,11 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                               {/* Name */}
                               <span className="font-sans text-sm text-warmDark flex-1">
                                 {m.name}
-                                {isMe && <span className="text-warmDark/40 text-xs ml-1">(you)</span>}
+                                {isMe && <span className="text-warmDark/75 text-sm ml-1">(you)</span>}
                               </span>
                               {/* Role badge */}
-                              {m.role === 'owner' && <span className="text-xs text-gold/80 font-sans">owner</span>}
-                              {m.role === 'admin' && <span className="text-xs text-teal/80 font-sans">admin</span>}
+                              {m.role === 'owner' && <span className="text-sm text-gold/80 font-sans">owner</span>}
+                              {m.role === 'admin' && <span className="text-sm text-teal/80 font-sans">admin</span>}
                             </label>
                           )
                         })}

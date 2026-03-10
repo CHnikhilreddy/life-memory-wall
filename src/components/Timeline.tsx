@@ -74,7 +74,7 @@ export default function Timeline() {
             <div className="w-2 h-2 rounded-full bg-gold/50" />
           </div>
         </div>
-        <p className="font-handwriting text-xl text-warmDark/45">opening your memories...</p>
+        <p className="font-handwriting text-2xl text-warmDark/80">opening your memories...</p>
       </div>
     )
   }
@@ -180,7 +180,7 @@ const loadPendingInvites = async () => {
   const InviteSection = canInvite ? (
     <div className="mt-4 pt-4 border-t border-warmMid/10 space-y-3">
       <div>
-        <p className="font-sans text-xs text-warmDark/50 mb-1.5">Invite by email</p>
+        <p className="font-sans text-sm text-warmDark/75 mb-1.5">Invite by email</p>
         <div className="flex gap-2">
           <input
             type="email"
@@ -199,7 +199,7 @@ const loadPendingInvites = async () => {
           </button>
         </div>
         {inviteStatus && (
-          <p className={`text-xs mt-2 font-sans ${inviteStatus.ok ? 'text-teal' : 'text-coral'}`}>
+          <p className={`text-sm mt-2 font-sans ${inviteStatus.ok ? 'text-teal' : 'text-coral'}`}>
             {inviteStatus.msg}
           </p>
         )}
@@ -237,23 +237,23 @@ const loadPendingInvites = async () => {
     <ul className="space-y-1.5">
       {members.map((m) => (
         <li key={m.userId} className="flex items-center gap-2 group">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-xs font-serif text-warmDark flex-shrink-0">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-sm font-serif text-warmDark flex-shrink-0">
             {m.name[0]}
           </div>
           <span className="font-sans text-sm text-warmDark/80 flex-1 min-w-0 truncate">
-            {m.name}{m.userId === currentUser?.id && <span className="text-warmDark/40 ml-1 text-xs">(you)</span>}
+            {m.name}{m.userId === currentUser?.id && <span className="text-warmDark/75 ml-1 text-sm">(you)</span>}
           </span>
-          {m.role === 'owner' && <span className="text-xs text-gold flex-shrink-0">owner</span>}
-          {m.role === 'admin' && <span className="text-xs text-teal flex-shrink-0">admin</span>}
+          {m.role === 'owner' && <span className="text-sm text-gold flex-shrink-0">owner</span>}
+          {m.role === 'admin' && <span className="text-sm text-teal flex-shrink-0">admin</span>}
           {showActions && canInvite && m.userId !== currentUser?.id && m.role !== 'owner' && (
             removingMemberId === m.userId ? (
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button onClick={() => handleRemoveMember(m.userId)} className="text-[10px] text-coral font-medium">Remove</button>
-                <button onClick={() => setRemovingMemberId(null)} className="text-[10px] text-warmDark/40">Cancel</button>
+                <button onClick={() => handleRemoveMember(m.userId)} className="text-sm text-coral font-medium">Remove</button>
+                <button onClick={() => setRemovingMemberId(null)} className="text-sm text-warmDark/75">Cancel</button>
               </div>
             ) : (
               <button onClick={() => setRemovingMemberId(m.userId)}
-                className="w-5 h-5 rounded-full flex items-center justify-center text-warmDark/20 opacity-0 group-hover:opacity-100 hover:text-coral/70 hover:bg-coral/10 transition-all flex-shrink-0"
+                className="w-5 h-5 rounded-full flex items-center justify-center text-warmDark/75 opacity-0 group-hover:opacity-100 hover:text-coral/70 hover:bg-coral/10 transition-all flex-shrink-0"
                 title="Remove member">
                 <UserMinus className="w-3 h-3" />
               </button>
@@ -270,7 +270,7 @@ const loadPendingInvites = async () => {
       <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false); setInviteStatus(null) }} />
       <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-4 w-72 shadow-xl max-h-[80vh] overflow-y-auto">
         <p className="font-serif text-sm text-warmDark mb-1">Who can see this</p>
-        <p className="font-sans text-xs text-warmDark/40 mb-3">
+        <p className="font-sans text-sm text-warmDark/75 mb-3">
           {selectedMemory?.visibleTo && selectedMemory.visibleTo.length > 0 ? 'Specific people only' : 'Everyone in the space'}
         </p>
         {renderMembersList(memoryMembers)}
@@ -288,14 +288,14 @@ const loadPendingInvites = async () => {
         <div className="flex border-b border-warmMid/10">
           <button
             onClick={() => setMembersTab('members')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-sans transition-colors ${membersTab === 'members' ? 'text-warmDark border-b-2 border-gold/60' : 'text-warmDark/40 hover:text-warmDark/60'}`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-sans transition-colors ${membersTab === 'members' ? 'text-warmDark border-b-2 border-gold/60' : 'text-warmDark/75 hover:text-warmDark/70'}`}
           >
             <Users className="w-3.5 h-3.5" /> Members
           </button>
           {canInvite && (
             <button
               onClick={() => { setMembersTab('invites'); if (membersTab !== 'invites') loadPendingInvites() }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-sans transition-colors ${membersTab === 'invites' ? 'text-warmDark border-b-2 border-gold/60' : 'text-warmDark/40 hover:text-warmDark/60'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-sans transition-colors ${membersTab === 'invites' ? 'text-warmDark border-b-2 border-gold/60' : 'text-warmDark/75 hover:text-warmDark/70'}`}
             >
               <Mail className="w-3.5 h-3.5" /> Pending
             </button>
@@ -307,7 +307,7 @@ const loadPendingInvites = async () => {
             <>
               {renderMembersList(allActiveMembers, true)}
               {memberActionError && (
-                <p className="text-xs text-coral font-sans mt-2">{memberActionError}</p>
+                <p className="text-sm text-coral font-sans mt-2">{memberActionError}</p>
               )}
               {InviteSection}
               {/* Leave group — for non-owners in group spaces */}
@@ -315,17 +315,17 @@ const loadPendingInvites = async () => {
                 <div className="mt-4 pt-3 border-t border-warmMid/10">
                   {!leaveConfirm ? (
                     <button onClick={() => setLeaveConfirm(true)}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-coral/70 hover:text-coral hover:bg-coral/8 transition-colors text-xs font-sans">
+                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-coral/70 hover:text-coral hover:bg-coral/8 transition-colors text-sm font-sans">
                       <LogOut className="w-3.5 h-3.5" /> Leave group
                     </button>
                   ) : (
                     <div className="text-center space-y-2">
-                      <p className="text-xs text-warmDark/70 font-sans">Leave <strong>{space.title}</strong>?</p>
+                      <p className="text-sm text-warmDark/70 font-sans">Leave <strong>{space.title}</strong>?</p>
                       <div className="flex gap-2">
                         <button onClick={() => setLeaveConfirm(false)} disabled={leaveLoading}
-                          className="flex-1 py-2 rounded-xl text-warmDark/50 hover:bg-white/30 transition-all text-xs font-sans">Cancel</button>
+                          className="flex-1 py-2 rounded-xl text-warmDark/75 hover:bg-white/30 transition-all text-sm font-sans">Cancel</button>
                         <button onClick={handleLeaveSpace} disabled={leaveLoading}
-                          className="flex-1 py-2 rounded-xl bg-coral/80 text-white text-xs font-sans disabled:opacity-60 flex items-center justify-center gap-1">
+                          className="flex-1 py-2 rounded-xl bg-coral/80 text-white text-sm font-sans disabled:opacity-60 flex items-center justify-center gap-1">
                           {leaveLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Leaving…</> : 'Leave'}
                         </button>
                       </div>
@@ -336,27 +336,27 @@ const loadPendingInvites = async () => {
             </>
           ) : (
             invitesLoading ? (
-              <div className="flex items-center justify-center gap-2 py-8 text-warmDark/40">
+              <div className="flex items-center justify-center gap-2 py-8 text-warmDark/75">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-xs font-sans">Loading...</span>
+                <span className="text-sm font-sans">Loading...</span>
               </div>
             ) : pendingInvitesList.length === 0 ? (
-              <p className="text-center font-handwriting text-warmDark/35 py-8">No pending invites</p>
+              <p className="text-center font-handwriting text-warmDark/70 py-8">No pending invites</p>
             ) : (
               <ul className="space-y-2">
                 {pendingInvitesList.map((inv) => (
                   <li key={inv.id} className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-xs font-sans text-warmDark flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-sm font-sans text-warmDark flex-shrink-0">
                       {inv.email.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-sans text-xs text-warmDark/70 flex-1 truncate">{inv.email}</span>
+                    <span className="font-sans text-sm text-warmDark/70 flex-1 truncate">{inv.email}</span>
                     {inv.status === 'rejected' ? (
-                      <span className="text-[10px] font-sans text-coral/70 bg-coral/10 px-2 py-0.5 rounded-full flex-shrink-0">declined</span>
+                      <span className="text-sm font-sans text-coral/70 bg-coral/10 px-2 py-0.5 rounded-full flex-shrink-0">declined</span>
                     ) : (
                       <button
                         onClick={() => handleCancelInvite(inv.id)}
                         disabled={cancellingId === inv.id}
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-warmDark/30 hover:text-coral/70 hover:bg-coral/10 transition-colors flex-shrink-0 disabled:opacity-40"
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-warmDark/70 hover:text-coral/70 hover:bg-coral/10 transition-colors flex-shrink-0 disabled:opacity-40"
                         title="Cancel invite"
                       >
                         {cancellingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
@@ -381,17 +381,17 @@ const loadPendingInvites = async () => {
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); goBack() }}
-            className="glass rounded-xl px-3 py-2 flex items-center gap-1.5 text-warmDark/60 hover:text-warmDark transition-colors shadow-sm"
+            className="glass rounded-xl px-3 py-2 flex items-center gap-1.5 text-warmDark/70 hover:text-warmDark transition-colors shadow-sm"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="font-sans text-xs">Timeline</span>
+            <span className="font-sans text-sm">Timeline</span>
           </button>
 
           <div className="relative">
             <button
               type="button"
               onClick={() => setShowMembers((v) => !v)}
-              className="glass rounded-xl px-3 py-2 flex items-center gap-1.5 text-warmDark/60 hover:text-warmDark transition-colors shadow-sm"
+              className="glass rounded-xl px-3 py-2 flex items-center gap-1.5 text-warmDark/70 hover:text-warmDark transition-colors shadow-sm"
             >
               <div className="flex -space-x-1">
                 {memoryMembers.slice(0, 3).map((m) => (
@@ -400,7 +400,7 @@ const loadPendingInvites = async () => {
                   </div>
                 ))}
               </div>
-              <span className="text-xs font-sans">{memoryMembers.length}</span>
+              <span className="text-sm font-sans">{memoryMembers.length}</span>
             </button>
             {showMembers && MemoryMembersPanel}
           </div>
@@ -419,7 +419,7 @@ const loadPendingInvites = async () => {
             <div className="glass rounded-2xl px-5 py-3 flex items-center justify-between w-full">
               <button
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); goBack() }}
-                className="flex items-center gap-2 text-warmDark/60 hover:text-warmDark transition-colors cursor-pointer"
+                className="flex items-center gap-2 text-warmDark/70 hover:text-warmDark transition-colors cursor-pointer"
                 type="button"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -445,9 +445,9 @@ const loadPendingInvites = async () => {
                     ))}
                   </div>
                 ) : (
-                  <Users className="w-4 h-4 text-warmDark/50" />
+                  <Users className="w-4 h-4 text-warmDark/75" />
                 )}
-                <span className="text-xs font-sans text-warmDark/60">
+                <span className="text-sm font-sans text-warmDark/70">
                   {space.membersList.filter((m) => m.status === 'active').length}
                 </span>
               </button>
@@ -464,11 +464,11 @@ const loadPendingInvites = async () => {
           animate={{ opacity: 1 }}
           className="text-center px-4 pt-8 pb-4"
         >
-          <p className="font-handwriting text-2xl text-warmDark/55">
+          <p className="font-handwriting text-2xl text-warmDark/70">
             {space.description || 'A collection of precious moments'}
           </p>
           {space.type === 'group' && space.membersList.length > 0 && (
-            <p className="font-sans text-sm text-warmDark/45 mt-2">
+            <p className="font-sans text-sm text-warmDark/75 mt-2">
               with {space.membersList.filter((m) => m.status === 'active').map((m) => m.name).join(', ')}
             </p>
           )}
@@ -540,7 +540,7 @@ const loadPendingInvites = async () => {
                         className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-300 ${
                           isSelected
                             ? 'bg-white/50 text-warmDark'
-                            : 'text-warmDark/50 hover:text-warmDark/70 hover:bg-white/20'
+                            : 'text-warmDark/75 hover:text-warmDark/70 hover:bg-white/20'
                         }`}
                       >
                         <h3 className={`font-serif text-sm leading-tight truncate ${
@@ -548,7 +548,7 @@ const loadPendingInvites = async () => {
                         }`}>
                           {memory.title}
                         </h3>
-                        <p className="font-handwriting text-xs text-warmDark/40 mt-0.5">
+                        <p className="font-handwriting text-sm text-warmDark/75 mt-0.5">
                           {new Date(memory.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </p>
                       </button>
@@ -603,14 +603,14 @@ const loadPendingInvites = async () => {
             {/* Empty state */}
             {sortedMemories.length === 0 && (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-20">
-                <p className="font-handwriting text-3xl text-warmDark/40 mb-4">No memories yet</p>
-                <p className="font-sans text-warmDark/35">Tap the glowing orb to create your first memory</p>
+                <p className="font-handwriting text-3xl text-warmDark/75 mb-4">No memories yet</p>
+                <p className="font-sans text-warmDark/70">Tap the glowing orb to create your first memory</p>
               </motion.div>
             )}
 
             {sortedMemories.length > 0 && !isDetailOpen && (
               <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="text-center pt-16">
-                <p className="font-handwriting text-xl text-warmDark/65">...and the story continues</p>
+                <p className="font-handwriting text-2xl text-warmDark/80">...and the story continues</p>
               </motion.div>
             )}
           </div>

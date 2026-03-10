@@ -27,7 +27,7 @@ function captionFontClass(html: string): string {
   if (len < 60)  return 'text-xl leading-snug'
   if (len < 110) return 'text-base leading-relaxed'
   if (len < 200) return 'text-sm leading-relaxed'
-  return 'text-xs leading-relaxed'
+  return 'text-sm leading-relaxed'
 }
 
 const storyGradients = [
@@ -168,12 +168,12 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
               <div className="min-w-0 flex-1">
                 <h2 className="font-serif text-base text-white leading-snug">{memory.title}</h2>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="font-handwriting text-xs text-white/75">
+                  <span className="font-handwriting text-sm text-white/75">
                     {formatDateFull(memory.date)}
                     {memory.endDate && ` — ${formatDateFull(memory.endDate)}`}
                   </span>
                   {memory.location && (
-                    <span className="flex items-center gap-1 text-white/55 text-xs">
+                    <span className="flex items-center gap-1 text-white/75 text-sm">
                       <MapPin className="w-3 h-3" />
                       {memory.location}
                     </span>
@@ -184,14 +184,14 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                 <button
                   onClick={() => setActiveTab('timeline')}
                   title="Stories"
-                  className={`p-1.5 rounded-lg transition-all ${activeTab === 'timeline' ? 'bg-white/25 text-white' : 'text-white/45 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition-all ${activeTab === 'timeline' ? 'bg-white/25 text-white' : 'text-white/70 hover:text-white'}`}
                 >
                   <BookOpen className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setActiveTab('photos')}
                   title="Photos"
-                  className={`p-1.5 rounded-lg transition-all ${activeTab === 'photos' ? 'bg-white/25 text-white' : 'text-white/45 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition-all ${activeTab === 'photos' ? 'bg-white/25 text-white' : 'text-white/70 hover:text-white'}`}
                 >
                   <Camera className="w-4 h-4" />
                 </button>
@@ -199,14 +199,14 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                 <button
                   onClick={() => { setEditMode((v) => !v); if (editMode) resetForm() }}
                   title={editMode ? 'Done editing' : 'Edit moments'}
-                  className={`p-1.5 rounded-lg transition-all ${editMode ? 'bg-coral/40 text-white' : 'text-white/45 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition-all ${editMode ? 'bg-coral/40 text-white' : 'text-white/70 hover:text-white'}`}
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
             {memory.story && (
-              <p className="font-sans text-xs text-white/65 leading-relaxed line-clamp-2">{memory.story}</p>
+              <p className="font-sans text-sm text-white/65 leading-relaxed line-clamp-2">{memory.story}</p>
             )}
           </div>
         </div>
@@ -227,19 +227,19 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
           <div className="min-w-0 flex-1">
             <h2 className="font-serif text-base text-warmDark leading-snug">{memory.title}</h2>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              <span className="font-handwriting text-xs text-warmDark/55">
+              <span className="font-handwriting text-sm text-warmDark/70">
                 {formatDateFull(memory.date)}
                 {memory.endDate && ` — ${formatDateFull(memory.endDate)}`}
               </span>
               {memory.location && (
-                <span className="flex items-center gap-1 text-warmDark/40 text-xs">
+                <span className="flex items-center gap-1 text-warmDark/75 text-sm">
                   <MapPin className="w-3 h-3" />
                   {memory.location}
                 </span>
               )}
             </div>
             {memory.story && (
-              <p className="font-sans text-xs text-warmDark/75 leading-relaxed mt-1 line-clamp-2">
+              <p className="font-sans text-sm text-warmDark/75 leading-relaxed mt-1 line-clamp-2">
                 {memory.story}
               </p>
             )}
@@ -248,14 +248,14 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
             <button
               onClick={() => setActiveTab('timeline')}
               title="Stories"
-              className={`p-1.5 rounded-lg transition-all ${activeTab === 'timeline' ? 'bg-gold/20 text-warmDark' : 'text-warmDark/35 hover:text-warmDark/55'}`}
+              className={`p-1.5 rounded-lg transition-all ${activeTab === 'timeline' ? 'bg-gold/20 text-warmDark' : 'text-warmDark/70 hover:text-warmDark/70'}`}
             >
               <BookOpen className="w-4 h-4" />
             </button>
             <button
               onClick={() => setActiveTab('photos')}
               title="Photos"
-              className={`p-1.5 rounded-lg transition-all ${activeTab === 'photos' ? 'bg-gold/20 text-warmDark' : 'text-warmDark/35 hover:text-warmDark/55'}`}
+              className={`p-1.5 rounded-lg transition-all ${activeTab === 'photos' ? 'bg-gold/20 text-warmDark' : 'text-warmDark/70 hover:text-warmDark/70'}`}
             >
               <Camera className="w-4 h-4" />
             </button>
@@ -264,7 +264,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
               onClick={() => { setEditMode((v) => !v); if (editMode) resetForm() }}
               title={editMode ? 'Done editing' : 'Edit moments'}
               className={`p-1.5 rounded-lg transition-all ${
-                editMode ? 'bg-coral/10 text-coral' : 'text-warmDark/35 hover:text-warmDark/55'
+                editMode ? 'bg-coral/10 text-coral' : 'text-warmDark/70 hover:text-warmDark/70'
               }`}
             >
               <Pencil className="w-3.5 h-3.5" />
@@ -291,12 +291,12 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                     <div className="absolute inset-0 rounded-full border-2 border-gold/20 border-t-gold animate-spin" style={{ animationDuration: '1.2s' }} />
                     <div className="absolute inset-[4px] rounded-full border border-coral/20 border-t-coral/60 animate-spin" style={{ animationDuration: '0.8s', animationDirection: 'reverse' }} />
                   </div>
-                  <p className="font-handwriting text-lg text-warmDark/40">loading stories...</p>
+                  <p className="font-handwriting text-lg text-warmDark/75">loading stories...</p>
                 </div>
               ) : substories.length === 0 ? (
                 <div className="py-16">
-                  <p className="font-handwriting text-3xl text-warmDark/35 mb-2">No stories yet</p>
-                  <p className="font-sans text-sm text-warmDark/30">Add moments from this memory</p>
+                  <p className="font-handwriting text-3xl text-warmDark/70 mb-2">No stories yet</p>
+                  <p className="font-sans text-sm text-warmDark/70">Add moments from this memory</p>
                 </div>
               ) : (
                 <div className="relative">
@@ -331,7 +331,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                 <div className="absolute -top-1 right-0 flex gap-1 z-10">
                                   <button
                                     onClick={() => startEditSubstory(sub)}
-                                    className="w-6 h-6 rounded-lg bg-white/80 shadow flex items-center justify-center text-warmDark/50 hover:text-warmDark transition-colors"
+                                    className="w-6 h-6 rounded-lg bg-white/80 shadow flex items-center justify-center text-warmDark/75 hover:text-warmDark transition-colors"
                                   >
                                     <Pencil className="w-3 h-3" />
                                   </button>
@@ -368,7 +368,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                         <img src={sub.photos[0]} alt="" className="w-full rounded-xl object-contain" />
                                       ) : (
                                         <div className={`w-full h-32 rounded-xl bg-gradient-to-br ${storyGradients[idx % storyGradients.length]} flex items-center justify-center border border-white/40`}>
-                                          <Image className="w-8 h-8 text-warmDark/25" />
+                                          <Image className="w-8 h-8 text-warmDark/75" />
                                         </div>
                                       )}
                                     </div>
@@ -392,7 +392,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                         <img src={sub.photos[0]} alt="" className="w-full rounded-xl object-contain" />
                                       ) : (
                                         <div className={`w-full h-32 rounded-xl bg-gradient-to-br ${storyGradients[idx % storyGradients.length]} flex items-center justify-center border border-white/40`}>
-                                          <Image className="w-8 h-8 text-warmDark/25" />
+                                          <Image className="w-8 h-8 text-warmDark/75" />
                                         </div>
                                       )}
                                     </div>
@@ -408,7 +408,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                     <img src={sub.photos[0]} alt="" className="w-3/5 rounded-2xl object-contain bg-black/5 mb-3" />
                                   ) : (
                                     <div className={`w-3/5 h-44 rounded-2xl bg-gradient-to-br ${storyGradients[idx % storyGradients.length]} flex items-center justify-center border border-white/40 mb-3`}>
-                                      <Image className="w-10 h-10 text-warmDark/25" />
+                                      <Image className="w-10 h-10 text-warmDark/75" />
                                     </div>
                                   )}
                                   {sub.caption && <div className="font-sans text-sm text-warmDark/90 leading-relaxed" dangerouslySetInnerHTML={{ __html: sub.caption }} />}
@@ -419,12 +419,12 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               {sub.type === 'img-bottom' && (
                                 <div>
                                   {sub.title && <h4 className="font-serif text-lg font-bold text-warmDark mb-3">{sub.title}</h4>}
-                                  {sub.caption && <div className="font-sans text-sm text-warmDark/65 leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: sub.caption }} />}
+                                  {sub.caption && <div className="font-sans text-sm text-warmDark/75 leading-relaxed mb-3" dangerouslySetInnerHTML={{ __html: sub.caption }} />}
                                   {sub.photos && sub.photos.length > 0 ? (
                                     <img src={sub.photos[0]} alt="" className="w-3/5 rounded-2xl object-contain bg-black/5" />
                                   ) : (
                                     <div className={`w-3/5 h-44 rounded-2xl bg-gradient-to-br ${storyGradients[idx % storyGradients.length]} flex items-center justify-center border border-white/40`}>
-                                      <Image className="w-10 h-10 text-warmDark/25" />
+                                      <Image className="w-10 h-10 text-warmDark/75" />
                                     </div>
                                   )}
                                 </div>
@@ -444,7 +444,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                     <div className="grid grid-cols-2 gap-2">
                                       {[0, 1, 2, 3].map((n) => (
                                         <div key={n} className={`h-28 rounded-xl bg-gradient-to-br ${storyGradients[(idx + n) % storyGradients.length]} flex items-center justify-center border border-white/40`}>
-                                          <Image className="w-6 h-6 text-warmDark/20" />
+                                          <Image className="w-6 h-6 text-warmDark/75" />
                                         </div>
                                       ))}
                                     </div>
@@ -467,7 +467,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                   >
                                     {/* Layout picker */}
                                     <div className="mb-3">
-                                      <p className="font-handwriting text-warmDark/45 text-xs mb-1.5">Layout</p>
+                                      <p className="font-handwriting text-warmDark/75 text-sm mb-1.5">Layout</p>
                                       <div className="grid grid-cols-6 gap-1.5">
                                         {([
                                           { type: 'text', preview: <div className="flex flex-col gap-0.5 w-full px-0.5"><div className="h-1 bg-warmDark/25 rounded-full"/><div className="h-1 bg-warmDark/15 rounded-full w-4/5"/><div className="h-1 bg-warmDark/15 rounded-full"/></div> },
@@ -493,7 +493,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                       value={newTitle}
                                       onChange={(e) => setNewTitle(e.target.value)}
                                       placeholder="Title..."
-                                      className="w-full font-serif text-base text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-3 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/35"
+                                      className="w-full font-serif text-base text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-3 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/70"
                                     />
                                     <RichTextEditor
                                       value={newContent}
@@ -519,23 +519,23 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                                           </div>
                                         )}
                                         {uploading
-                                          ? <div className="flex items-center justify-center gap-2 text-warmDark/50 py-2"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-xs">Uploading...</span></div>
+                                          ? <div className="flex items-center justify-center gap-2 text-warmDark/75 py-2"><Loader2 className="w-4 h-4 animate-spin" /><span className="text-sm">Uploading...</span></div>
                                           : <div className="grid grid-cols-2 gap-1.5">
                                               <button type="button" onClick={() => editFileInputRef.current?.click()}
                                                 className="border border-dashed border-warmMid/15 rounded-xl p-2.5 flex items-center justify-center gap-1.5 hover:border-gold/25 transition-colors">
-                                                <Upload className="w-3.5 h-3.5 text-warmDark/35" /><span className="text-xs text-warmDark/35">From Device</span>
+                                                <Upload className="w-3.5 h-3.5 text-warmDark/70" /><span className="text-sm text-warmDark/70">From Device</span>
                                               </button>
                                               <button type="button" onClick={() => editFileInputRef.current?.click()}
                                                 className="border border-dashed border-warmMid/15 rounded-xl p-2.5 flex items-center justify-center gap-1.5 hover:border-gold/25 transition-colors">
-                                                <Images className="w-3.5 h-3.5 text-warmDark/35" /><span className="text-xs text-warmDark/35">Google Photos</span>
+                                                <Images className="w-3.5 h-3.5 text-warmDark/70" /><span className="text-sm text-warmDark/70">Google Photos</span>
                                               </button>
                                             </div>
                                           }
                                       </div>
                                     )}
                                     <div className="flex gap-2">
-                                      <button onClick={resetForm} className="flex-1 py-2 rounded-xl text-xs text-warmDark/40 hover:bg-white/20 transition-all">Cancel</button>
-                                      <button onClick={handleSaveSubstory} className="flex-1 py-2 rounded-xl text-xs bg-gradient-to-r from-gold/80 to-coral/70 text-white font-medium">Save changes</button>
+                                      <button onClick={resetForm} className="flex-1 py-2 rounded-xl text-sm text-warmDark/75 hover:bg-white/20 transition-all">Cancel</button>
+                                      <button onClick={handleSaveSubstory} className="flex-1 py-2 rounded-xl text-sm bg-gradient-to-r from-gold/80 to-coral/70 text-white font-medium">Save changes</button>
                                     </div>
                                   </motion.div>
                                 )}
@@ -558,7 +558,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => setShowAddForm(true)}
-                    className="w-full py-4 border-2 border-dashed border-warmMid/30 rounded-2xl text-warmDark/60 hover:border-gold/50 hover:text-warmDark/80 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-4 border-2 border-dashed border-warmMid/30 rounded-2xl text-warmDark/70 hover:border-gold/50 hover:text-warmDark/80 transition-all flex items-center justify-center gap-2"
                   >
                     <Plus className="w-4 h-4" />
                     <span className="font-handwriting text-lg">Add a moment</span>
@@ -573,7 +573,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
 
                     {/* Layout template picker */}
                     <div className="mb-5">
-                      <p className="font-handwriting text-warmDark/45 text-sm mb-2">Choose a layout</p>
+                      <p className="font-handwriting text-warmDark/70 text-base mb-2">Choose a layout</p>
                       <div className="grid grid-cols-3 gap-2">
                         {[
                           {
@@ -663,7 +663,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                             <div className="w-full h-12 flex items-center justify-center">
                               {preview}
                             </div>
-                            <span className="font-sans text-[10px] text-warmDark/50 leading-none">{label}</span>
+                            <span className="font-sans text-sm text-warmDark/75 leading-none">{label}</span>
                           </button>
                         ))}
                       </div>
@@ -674,7 +674,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
                       placeholder="Title for this moment..."
-                      className="w-full font-serif text-lg text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-4 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/35"
+                      className="w-full font-serif text-lg text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-4 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/70"
                     />
 
                     <RichTextEditor
@@ -705,7 +705,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                           </div>
                         )}
                         {uploading ? (
-                          <div className="flex items-center justify-center gap-2 text-warmDark/50 py-4">
+                          <div className="flex items-center justify-center gap-2 text-warmDark/75 py-4">
                             <Loader2 className="w-5 h-5 animate-spin" />
                             <span className="text-sm">Uploading...</span>
                           </div>
@@ -713,13 +713,13 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                           <div className="grid grid-cols-2 gap-2">
                             <button type="button" onClick={() => fileInputRef.current?.click()}
                               className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
-                              <Upload className="w-5 h-5 text-warmDark/35" />
-                              <span className="text-xs text-warmDark/35">From Device</span>
+                              <Upload className="w-5 h-5 text-warmDark/70" />
+                              <span className="text-sm text-warmDark/70">From Device</span>
                             </button>
                             <button type="button" onClick={() => fileInputRef.current?.click()}
                               className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
-                              <Images className="w-5 h-5 text-warmDark/35" />
-                              <span className="text-xs text-warmDark/35">Google Photos</span>
+                              <Images className="w-5 h-5 text-warmDark/70" />
+                              <span className="text-sm text-warmDark/70">Google Photos</span>
                             </button>
                           </div>
                         )}
@@ -729,7 +729,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                     <div className="flex gap-3">
                       <button
                         onClick={resetForm}
-                        className="flex-1 py-3 rounded-xl text-warmDark/40 hover:bg-white/20 transition-all"
+                        className="flex-1 py-3 rounded-xl text-warmDark/75 hover:bg-white/20 transition-all"
                       >
                         Cancel
                       </button>
@@ -753,9 +753,9 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
             >
               {allPhotos.length === 0 ? (
                 <div className="py-16">
-                  <Camera className="w-12 h-12 text-warmDark/20 mx-auto mb-3" />
-                  <p className="font-handwriting text-3xl text-warmDark/35 mb-2">No photos yet</p>
-                  <p className="font-sans text-sm text-warmDark/30">Photos from your stories will appear here</p>
+                  <Camera className="w-12 h-12 text-warmDark/75 mx-auto mb-3" />
+                  <p className="font-handwriting text-3xl text-warmDark/70 mb-2">No photos yet</p>
+                  <p className="font-sans text-sm text-warmDark/70">Photos from your stories will appear here</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -780,19 +780,19 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                           <img src={item.url} alt={item.title} className="w-full object-contain" />
                         ) : (
                           <div className="h-32 flex items-center justify-center">
-                            <Image className="w-8 h-8 text-warmDark/20" />
+                            <Image className="w-8 h-8 text-warmDark/75" />
                           </div>
                         )}
                         {item.url && (
                           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-end">
                             <div className="w-full bg-gradient-to-t from-black/40 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {item.title && <p className="text-white text-xs truncate">{item.title}</p>}
+                              {item.title && <p className="text-white text-sm truncate">{item.title}</p>}
                             </div>
                           </div>
                         )}
                       </div>
                       {item.caption && (
-                        <p className="text-xs text-warmDark/40 mt-1.5 line-clamp-2 font-sans">{item.caption}</p>
+                        <p className="text-sm text-warmDark/75 mt-1.5 line-clamp-2 font-sans">{item.caption}</p>
                       )}
                     </motion.div>
                   ))}

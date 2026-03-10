@@ -51,6 +51,8 @@ export interface MemorySpace {
   title: string
   coverImage: string
   coverEmoji: string
+  coverIcon: string
+  coverColor: string
   memoryCount: number
   type: 'personal' | 'group'
   createdBy: string

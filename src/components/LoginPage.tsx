@@ -304,7 +304,7 @@ export default function LoginPage() {
             >
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.2 }}>
                 <h1 className="font-serif text-5xl md:text-6xl font-bold text-warmDark mb-3 text-shadow-warm">My Inner Circle</h1>
-                <p className="font-handwriting text-2xl text-warmDark/60 mb-14">Your stories, beautifully preserved</p>
+                <p className="font-handwriting text-2xl text-warmDark/70 mb-14">Your stories, beautifully preserved</p>
               </motion.div>
 
               <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
@@ -320,12 +320,12 @@ export default function LoginPage() {
                   onClick={() => setScreen('email')}
                   className="w-full glass rounded-2xl py-4 px-6 flex items-center justify-center gap-3 hover:bg-white/60 transition-all duration-500 group"
                 >
-                  <Mail className="w-5 h-5 text-warmDark/55" />
+                  <Mail className="w-5 h-5 text-warmDark/70" />
                   <span className="font-sans text-warmDark group-hover:text-warmDark/80">Sign in with Email</span>
                 </button>
               </motion.div>
 
-              <motion.p className="mt-6 text-warmDark/35 text-xs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
+              <motion.p className="mt-6 text-warmDark/70 text-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.3 }}>
                 Your memories are safe and private
               </motion.p>
             </motion.div>
@@ -346,7 +346,7 @@ export default function LoginPage() {
                   if (signupStep === 'verify') { setSignupStep('email'); setVerifyCode(''); setVerifyError(''); setResendMsg(''); return }
                   if (signupStep === 'profile') { setSignupStep('verify'); setSignupError(''); return }
                 }}
-                className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 mb-8 transition-colors"
+                className="flex items-center gap-2 text-warmDark/70 hover:text-warmDark/70 mb-8 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm">Back</span>
@@ -369,11 +369,11 @@ export default function LoginPage() {
                 {signupStep === 'email' && (
                   <motion.div key="s-email" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                     <h2 className="font-serif text-3xl text-warmDark mb-2">Create account</h2>
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-8">Start with your email address</p>
+                    <p className="font-handwriting text-xl text-warmDark/75 mb-8">Start with your email address</p>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
+                        <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Email address</label>
                         <input
                           type="email" value={signupEmail}
                           onChange={(e) => { setSignupEmail(e.target.value); setSignupError('') }}
@@ -395,7 +395,7 @@ export default function LoginPage() {
                         {loading ? 'Sending code…' : 'Send verification code'}
                       </motion.button>
 
-                      <button onClick={() => setScreen('email')} className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors">
+                      <button onClick={() => setScreen('email')} className="w-full text-center text-warmDark/75 text-sm hover:text-warmDark/70 transition-colors">
                         Already have an account? Sign in
                       </button>
                     </div>
@@ -406,14 +406,14 @@ export default function LoginPage() {
                 {signupStep === 'verify' && (
                   <motion.div key="s-verify" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                     <h2 className="font-serif text-3xl text-warmDark mb-2">Check your email</h2>
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-8">
+                    <p className="font-handwriting text-xl text-warmDark/75 mb-8">
                       We sent a 6-digit code to{' '}
                       <span className="text-warmDark/75">{signupEmail}</span>
                     </p>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Verification code</label>
+                        <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Verification code</label>
                         <input
                           type="text" inputMode="numeric" maxLength={6}
                           value={verifyCode}
@@ -443,7 +443,7 @@ export default function LoginPage() {
                       </motion.button>
 
                       <button onClick={handleSignupResend} disabled={resendLoading}
-                        className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors disabled:opacity-50">
+                        className="w-full text-center text-warmDark/75 text-sm hover:text-warmDark/70 transition-colors disabled:opacity-50">
                         {resendLoading ? 'Sending…' : "Didn't receive it? Resend code"}
                       </button>
                     </div>
@@ -454,31 +454,31 @@ export default function LoginPage() {
                 {signupStep === 'profile' && (
                   <motion.div key="s-profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                     <h2 className="font-serif text-3xl text-warmDark mb-2">Almost there!</h2>
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-8">Set your name and password</p>
+                    <p className="font-handwriting text-xl text-warmDark/75 mb-8">Set your name and password</p>
 
                     <div className="space-y-4">
                       <div>
-                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Your name</label>
+                        <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Your name</label>
                         <input type="text" value={signupName}
                           onChange={(e) => { setSignupName(e.target.value); setSignupError('') }}
                           placeholder="Jane Smith" autoFocus className={inputClass}
                         />
                       </div>
                       <div>
-                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Password</label>
+                        <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Password</label>
                         <div className="relative">
                           <input type={showSignupPassword ? 'text' : 'password'} value={signupPassword}
                             onChange={(e) => { setSignupPassword(e.target.value); setSignupError('') }}
                             placeholder="8+ chars, A-Z, 0-9, symbol"
                             className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
                           <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/70 hover:text-warmDark/80 transition-colors">
                             {showSignupPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
                         </div>
                       </div>
                       <div>
-                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Confirm password</label>
+                        <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Confirm password</label>
                         <input type="password" value={signupConfirm}
                           onChange={(e) => { setSignupConfirm(e.target.value); setSignupError('') }}
                           onKeyDown={(e) => e.key === 'Enter' && handleCompleteSignup()}
@@ -514,13 +514,13 @@ export default function LoginPage() {
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.4 }}
             >
-              <button onClick={resetAll} className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 mb-8 transition-colors">
+              <button onClick={resetAll} className="flex items-center gap-2 text-warmDark/70 hover:text-warmDark/70 mb-8 transition-colors">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm">Back</span>
               </button>
 
               <h2 className="font-serif text-3xl text-warmDark mb-2">Welcome back</h2>
-              <p className="font-handwriting text-lg text-warmDark/55 mb-8">
+              <p className="font-handwriting text-xl text-warmDark/75 mb-8">
                 {emailStep === 'enter' ? 'Enter your email to continue' : `Signing in as ${email}`}
               </p>
 
@@ -528,7 +528,7 @@ export default function LoginPage() {
                 {emailStep === 'enter' ? (
                   <motion.div key="email-input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
                     <div>
-                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
+                      <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Email address</label>
                       <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setLoginError('') }}
                         onKeyDown={(e) => e.key === 'Enter' && handleEmailNext()}
                         placeholder="you@example.com" autoFocus
@@ -544,14 +544,14 @@ export default function LoginPage() {
                       className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg">
                       Continue
                     </motion.button>
-                    <button onClick={() => setScreen('signup')} className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors">
+                    <button onClick={() => setScreen('signup')} className="w-full text-center text-warmDark/75 text-sm hover:text-warmDark/70 transition-colors">
                       No account? Create one
                     </button>
                   </motion.div>
                 ) : (
                   <motion.div key="password-input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
                     <div>
-                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Password</label>
+                      <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Password</label>
                       <div className="relative">
                         <input
                           type={showPassword ? 'text' : 'password'}
@@ -563,7 +563,7 @@ export default function LoginPage() {
                           className={`w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none transition-all border ${loginError ? 'border-coral/50 focus:ring-2 focus:ring-coral/30' : 'border-white/50 focus:ring-2 focus:ring-gold/30'}`}
                         />
                         <button type="button" onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/70 hover:text-warmDark/80 transition-colors">
                           {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
@@ -592,12 +592,12 @@ export default function LoginPage() {
 
                     <div className="flex items-center justify-between">
                       <button onClick={() => { setEmailStep('enter'); setLoginError('') }}
-                        className="text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
+                        className="text-warmDark/70 text-sm hover:text-warmDark/70 transition-colors">
                         Use a different email
                       </button>
                       <button
                         onClick={() => { setForgotEmail(email); setForgotStep('email'); setScreen('forgot') }}
-                        className="text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
+                        className="text-warmDark/70 text-sm hover:text-warmDark/70 transition-colors">
                         Forgot password?
                       </button>
                     </div>
@@ -617,13 +617,13 @@ export default function LoginPage() {
               transition={{ duration: 0.4 }}
             >
               <h2 className="font-serif text-3xl text-warmDark mb-2">Verify your email</h2>
-              <p className="font-handwriting text-lg text-warmDark/55 mb-8">
+              <p className="font-handwriting text-xl text-warmDark/75 mb-8">
                 We sent a 6-digit code to your email. Enter it below.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="font-handwriting text-warmDark/50 text-base block mb-2">Verification code</label>
+                  <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Verification code</label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -658,7 +658,7 @@ export default function LoginPage() {
                 </motion.button>
 
                 <button onClick={handleResend} disabled={resendLoading}
-                  className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors disabled:opacity-50">
+                  className="w-full text-center text-warmDark/75 text-sm hover:text-warmDark/70 transition-colors disabled:opacity-50">
                   {resendLoading ? 'Sending…' : "Didn't receive it? Resend code"}
                 </button>
               </div>
@@ -675,7 +675,7 @@ export default function LoginPage() {
               transition={{ duration: 0.4 }}
             >
               <button onClick={() => { setScreen('email'); setEmailStep('password'); setForgotError('') }}
-                className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 mb-8 transition-colors">
+                className="flex items-center gap-2 text-warmDark/70 hover:text-warmDark/70 mb-8 transition-colors">
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm">Back</span>
               </button>
@@ -685,9 +685,9 @@ export default function LoginPage() {
               <AnimatePresence mode="wait">
                 {forgotStep === 'email' && (
                   <motion.div key="forgot-email" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">Enter your email and we'll send a reset code.</p>
+                    <p className="font-handwriting text-xl text-warmDark/75 mb-6">Enter your email and we'll send a reset code.</p>
                     <div>
-                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
+                      <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Email address</label>
                       <input type="email" value={forgotEmail} onChange={(e) => { setForgotEmail(e.target.value); setForgotError('') }}
                         onKeyDown={(e) => e.key === 'Enter' && handleForgotSend()}
                         placeholder="you@example.com" autoFocus className={inputClass} />
@@ -708,9 +708,9 @@ export default function LoginPage() {
 
                 {forgotStep === 'code' && (
                   <motion.div key="forgot-code" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">Check your email for the 6-digit code.</p>
+                    <p className="font-handwriting text-xl text-warmDark/75 mb-6">Check your email for the 6-digit code.</p>
                     <div>
-                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Reset code</label>
+                      <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Reset code</label>
                       <input
                         type="text" inputMode="numeric" maxLength={6}
                         value={forgotCode}
@@ -731,7 +731,7 @@ export default function LoginPage() {
                       Continue
                     </motion.button>
                     <button onClick={() => { setForgotStep('email'); setForgotCode('') }}
-                      className="w-full text-center text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
+                      className="w-full text-center text-warmDark/70 text-sm hover:text-warmDark/70 transition-colors">
                       Use a different email
                     </button>
                   </motion.div>
@@ -739,22 +739,22 @@ export default function LoginPage() {
 
                 {forgotStep === 'newpass' && !forgotSuccess && (
                   <motion.div key="forgot-newpass" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">Enter your new password.</p>
+                    <p className="font-handwriting text-xl text-warmDark/75 mb-6">Enter your new password.</p>
                     <div>
-                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">New password</label>
+                      <label className="font-handwriting text-warmDark/75 text-lg block mb-2">New password</label>
                       <div className="relative">
                         <input type={showForgotPass ? 'text' : 'password'} value={forgotNewPass}
                           onChange={(e) => { setForgotNewPass(e.target.value); setForgotError('') }}
                           placeholder="8+ chars, A-Z, 0-9, symbol" autoFocus
                           className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
                         <button type="button" onClick={() => setShowForgotPass(!showForgotPass)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/70 hover:text-warmDark/80 transition-colors">
                           {showForgotPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                         </button>
                       </div>
                     </div>
                     <div>
-                      <label className="font-handwriting text-warmDark/50 text-base block mb-2">Confirm password</label>
+                      <label className="font-handwriting text-warmDark/75 text-lg block mb-2">Confirm password</label>
                       <input type="password" value={forgotConfirm}
                         onChange={(e) => { setForgotConfirm(e.target.value); setForgotError('') }}
                         onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()}

@@ -69,7 +69,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
               />
               {memory.photos.length > 1 && (
                 <div className="absolute bottom-2 right-2 glass rounded-full px-2 py-0.5">
-                  <span className="text-xs font-sans text-warmDark/70">+{memory.photos.length - 1}</span>
+                  <span className="text-sm font-sans text-warmDark/70">+{memory.photos.length - 1}</span>
                 </div>
               )}
             </>
@@ -79,25 +79,25 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
             </div>
           )}
           <div className="absolute top-3 right-3 glass rounded-full px-3 py-1">
-            <span className="font-handwriting text-sm text-warmDark">{formatDate(memory.date)}</span>
+            <span className="font-handwriting text-base text-warmDark">{formatDate(memory.date)}</span>
           </div>
         </div>
 
         <h3 className="font-serif text-xl text-warmDark mb-2 leading-tight">{memory.title}</h3>
 
-<p className="font-sans text-sm text-warmDark/65 leading-relaxed line-clamp-3">{memory.story}</p>
+<p className="font-sans text-base text-warmDark/75 leading-relaxed line-clamp-3">{memory.story}</p>
 
         {memory.location && (
-          <div className="flex items-center gap-1 mt-3 text-warmDark/50">
+          <div className="flex items-center gap-1 mt-3 text-warmDark/70">
             <MapPin className="w-3 h-3" />
-            <span className="text-xs font-sans">{memory.location}</span>
+            <span className="text-sm font-sans">{memory.location}</span>
           </div>
         )}
 
         {memory.tags && memory.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {memory.tags.map((tag) => (
-              <span key={tag} className="text-xs bg-lavender/40 text-warmDark/60 px-2 py-1 rounded-full font-sans">
+              <span key={tag} className="text-sm bg-lavender/40 text-warmDark/75 px-2 py-1 rounded-full font-sans">
                 {tag}
               </span>
             ))}
@@ -107,7 +107,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
         {memory.substories && memory.substories.length > 0 && (
           <div className="mt-3 flex items-center gap-1.5 text-gold/70">
             <div className="w-4 h-px bg-gold/40" />
-            <span className="text-xs font-handwriting">
+            <span className="text-sm font-handwriting">
               {memory.substories.length} moments inside — tap to explore
             </span>
           </div>
@@ -122,7 +122,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
                 className="flex items-center gap-1 bg-white/60 rounded-full px-2 py-1 hover:bg-white/80 transition-colors"
               >
                 <span className="text-sm">{emoji}</span>
-                <span className="text-xs text-warmDark/55">{count}</span>
+                <span className="text-sm text-warmDark/70">{count}</span>
               </button>
             ))}
           </div>
@@ -134,7 +134,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
             onClick={(e) => { e.stopPropagation(); onEdit(memory) }}
             className="glass rounded-full p-2 hover:bg-white/80 transition-colors"
           >
-            <Edit3 className="w-3.5 h-3.5 text-warmDark/55" />
+            <Edit3 className="w-3.5 h-3.5 text-warmDark/70" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(memory.id) }}
@@ -149,7 +149,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
           <div className="relative">
             <button
               onClick={(e) => { e.stopPropagation(); setShowReactions(!showReactions) }}
-              className="text-warmDark/40 hover:text-warmDark/65 text-sm transition-colors flex items-center gap-1"
+              className="text-warmDark/75 hover:text-warmDark/75 text-sm transition-colors flex items-center gap-1"
             >
               <MessageCircle className="w-4 h-4" />
               <span className="font-handwriting">react</span>
