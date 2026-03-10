@@ -41,8 +41,11 @@ export const api = {
   login: (data: { email?: string; phone?: string; name?: string; password?: string }) =>
     request<{ user: any; token: string }>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
 
-  signup: (data: { name: string; email: string; password: string }) =>
-    request<{ user: any; token: string }>('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+  preSignup: (email: string) =>
+    request<{ userId: string }>('/auth/pre-signup', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  completeSignup: (userId: string, name: string, password: string) =>
+    request<{ user: any; token: string }>('/auth/complete-signup', { method: 'POST', body: JSON.stringify({ userId, name, password }) }),
 
   getUsers: () =>
     request<any[]>('/auth/users'),

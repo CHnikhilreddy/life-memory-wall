@@ -7,9 +7,19 @@ import ParticleBackground from './ParticleBackground'
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
 
+function validatePassword(p: string): string | null {
+  if (p.length < 8) return 'Password must be at least 8 characters'
+  if (!/[A-Z]/.test(p)) return 'Password must contain at least one uppercase letter'
+  if (!/[a-z]/.test(p)) return 'Password must contain at least one lowercase letter'
+  if (!/[0-9]/.test(p)) return 'Password must contain at least one number'
+  if (!/[^A-Za-z0-9]/.test(p)) return 'Password must contain at least one special character'
+  return null
+}
+
 type Screen = 'main' | 'email' | 'signup' | 'verify' | 'forgot'
 type EmailStep = 'enter' | 'password'
 type ForgotStep = 'email' | 'code' | 'newpass'
+type SignupStep = 'email' | 'verify' | 'profile'
 
 export default function LoginPage() {
   const login = useStore((s) => s.login)
@@ -25,14 +35,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   // Signup flow
-  const [signupName, setSignupName] = useState('')
+  const [signupStep, setSignupStep] = useState<SignupStep>('email')
   const [signupEmail, setSignupEmail] = useState('')
+  const [signupUserId, setSignupUserId] = useState('')
+  const [signupName, setSignupName] = useState('')
   const [signupPassword, setSignupPassword] = useState('')
   const [signupConfirm, setSignupConfirm] = useState('')
   const [showSignupPassword, setShowSignupPassword] = useState(false)
   const [signupError, setSignupError] = useState('')
 
-  // Verify flow
+  // Verify flow (login-side: unverified email after login attempt)
   const [verifyUserId, setVerifyUserId] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [verifyError, setVerifyError] = useState('')
@@ -55,8 +67,10 @@ export default function LoginPage() {
     setPassword('')
     setEmailStep('enter')
     setLoginError('')
-    setSignupName('')
+    setSignupStep('email')
     setSignupEmail('')
+    setSignupUserId('')
+    setSignupName('')
     setSignupPassword('')
     setSignupConfirm('')
     setSignupError('')
@@ -82,6 +96,7 @@ export default function LoginPage() {
     setScreen('verify')
   }
 
+  // ── Login handlers ──────────────────────────────────────────
   const handleEmailNext = () => {
     if (!email.trim()) return
     if (!isValidEmail(email)) { setLoginError('Enter a valid email address (e.g. name@example.com)'); return }
@@ -98,6 +113,12 @@ export default function LoginPage() {
     } catch (err: any) {
       if (err.emailNotVerified && err.userId) {
         goToVerify(err.userId)
+      } else if (err.incompleteSignup && err.userId) {
+        // They verified email but never set name+password — send to profile step
+        setSignupUserId(err.userId)
+        setSignupEmail(email.trim().toLowerCase())
+        setSignupStep('profile')
+        setScreen('signup')
       } else if (err.noAccount) {
         setLoginError('__noAccount__')
       } else {
@@ -108,33 +129,75 @@ export default function LoginPage() {
     }
   }
 
-  const handleSignup = async () => {
+  // ── Signup handlers ─────────────────────────────────────────
+  const handlePreSignup = async () => {
     setSignupError('')
-    if (!signupName.trim() || !signupEmail.trim() || !signupPassword) {
-      setSignupError('All fields are required'); return
-    }
-    if (!isValidEmail(signupEmail)) {
-      setSignupError('Enter a valid email address (e.g. name@example.com)'); return
-    }
-    if (signupPassword.length < 6) {
-      setSignupError('Password must be at least 6 characters'); return
-    }
-    if (signupPassword !== signupConfirm) {
-      setSignupError('Passwords do not match'); return
-    }
+    if (!signupEmail.trim()) return
+    if (!isValidEmail(signupEmail)) { setSignupError('Enter a valid email address (e.g. name@example.com)'); return }
     setLoading(true)
     try {
-      const result = await api.signup({ name: signupName.trim(), email: signupEmail.trim().toLowerCase(), password: signupPassword })
-      setToken(result.token)
-      // Go to verify screen
-      goToVerify(result.user.id)
+      const result = await api.preSignup(signupEmail.trim().toLowerCase())
+      setSignupUserId(result.userId)
+      setVerifyCode('')
+      setVerifyError('')
+      setResendMsg('')
+      setSignupStep('verify')
     } catch (err: any) {
-      setSignupError(err.message || 'Sign up failed. Please try again.')
+      setSignupError(err.message || 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
+  const handleSignupVerify = async () => {
+    if (!verifyCode.trim() || verifyCode.length < 6) return
+    setLoading(true)
+    setVerifyError('')
+    try {
+      await api.verifyEmail(signupUserId, verifyCode.trim())
+      setVerifyCode('')
+      setSignupStep('profile')
+    } catch (err: any) {
+      setVerifyError(err.message || 'Invalid code. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSignupResend = async () => {
+    setResendLoading(true)
+    setResendMsg('')
+    try {
+      await api.sendVerification(signupUserId)
+      setResendMsg('A new code has been sent to your email.')
+    } catch {
+      setResendMsg('Failed to resend. Please try again.')
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
+  const handleCompleteSignup = async () => {
+    setSignupError('')
+    if (!signupName.trim()) { setSignupError('Name is required'); return }
+    if (!signupPassword) { setSignupError('Password is required'); return }
+    const pwErr = validatePassword(signupPassword)
+    if (pwErr) { setSignupError(pwErr); return }
+    if (signupPassword !== signupConfirm) { setSignupError('Passwords do not match'); return }
+    setLoading(true)
+    try {
+      const result = await api.completeSignup(signupUserId, signupName.trim(), signupPassword)
+      setToken(result.token)
+      useStore.setState({ isLoggedIn: true, currentUser: result.user, initialized: true })
+      await fetchSpaces()
+    } catch (err: any) {
+      setSignupError(err.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── Login verify handler (for unverified existing users) ────
   const handleVerify = async () => {
     if (!verifyCode.trim() || verifyCode.length < 6) return
     setLoading(true)
@@ -164,6 +227,7 @@ export default function LoginPage() {
     }
   }
 
+  // ── Forgot password handlers ────────────────────────────────
   const handleForgotSend = async () => {
     if (!forgotEmail.trim()) return
     if (!isValidEmail(forgotEmail)) { setForgotError('Enter a valid email address (e.g. name@example.com)'); return }
@@ -189,9 +253,8 @@ export default function LoginPage() {
 
   const handleForgotReset = async () => {
     setForgotError('')
-    if (!forgotNewPass || forgotNewPass.length < 6) {
-      setForgotError('Password must be at least 6 characters'); return
-    }
+    const pwErr = validatePassword(forgotNewPass)
+    if (pwErr) { setForgotError(pwErr); return }
     if (forgotNewPass !== forgotConfirm) {
       setForgotError('Passwords do not match'); return
     }
@@ -268,7 +331,7 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          {/* ===== SIGNUP SCREEN ===== */}
+          {/* ===== SIGNUP SCREEN (3 steps) ===== */}
           {screen === 'signup' && (
             <motion.div
               key="signup"
@@ -277,65 +340,172 @@ export default function LoginPage() {
               exit={{ opacity: 0, x: -40 }}
               transition={{ duration: 0.4 }}
             >
-              <button onClick={resetAll} className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 mb-8 transition-colors">
+              <button
+                onClick={() => {
+                  if (signupStep === 'email') { resetAll(); return }
+                  if (signupStep === 'verify') { setSignupStep('email'); setVerifyCode(''); setVerifyError(''); setResendMsg(''); return }
+                  if (signupStep === 'profile') { setSignupStep('verify'); setSignupError(''); return }
+                }}
+                className="flex items-center gap-2 text-warmDark/50 hover:text-warmDark/70 mb-8 transition-colors"
+              >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm">Back</span>
               </button>
 
-              <h2 className="font-serif text-3xl text-warmDark mb-2">Create account</h2>
-              <p className="font-handwriting text-lg text-warmDark/55 mb-8">Start preserving your memories</p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="font-handwriting text-warmDark/50 text-base block mb-2">Your name</label>
-                  <input type="text" value={signupName} onChange={(e) => setSignupName(e.target.value)}
-                    placeholder="Jane Smith" autoFocus className={inputClass} />
-                </div>
-                <div>
-                  <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
-                  <input type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)}
-                    placeholder="you@example.com" className={inputClass} />
-                </div>
-                <div>
-                  <label className="font-handwriting text-warmDark/50 text-base block mb-2">Password</label>
-                  <div className="relative">
-                    <input type={showSignupPassword ? 'text' : 'password'} value={signupPassword}
-                      onChange={(e) => setSignupPassword(e.target.value)} placeholder="At least 6 characters"
-                      className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
-                    <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
-                      {showSignupPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
+              {/* Step indicator */}
+              <div className="flex items-center gap-2 mb-8">
+                {(['email', 'verify', 'profile'] as SignupStep[]).map((step, i) => (
+                  <div key={step} className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      signupStep === step ? 'bg-gold w-6' :
+                      (['email', 'verify', 'profile'].indexOf(signupStep) > i) ? 'bg-gold/60' : 'bg-warmDark/20'
+                    }`} />
                   </div>
-                </div>
-                <div>
-                  <label className="font-handwriting text-warmDark/50 text-base block mb-2">Confirm password</label>
-                  <input type="password" value={signupConfirm} onChange={(e) => setSignupConfirm(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSignup()}
-                    placeholder="Repeat your password" className={inputClass} />
-                </div>
+                ))}
+              </div>
 
-                {signupError && (
-                  <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
-                    {signupError}
-                  </motion.p>
+              <AnimatePresence mode="wait">
+                {/* Step 1: Email */}
+                {signupStep === 'email' && (
+                  <motion.div key="s-email" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                    <h2 className="font-serif text-3xl text-warmDark mb-2">Create account</h2>
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-8">Start with your email address</p>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Email address</label>
+                        <input
+                          type="email" value={signupEmail}
+                          onChange={(e) => { setSignupEmail(e.target.value); setSignupError('') }}
+                          onKeyDown={(e) => e.key === 'Enter' && handlePreSignup()}
+                          placeholder="you@example.com" autoFocus className={inputClass}
+                        />
+                      </div>
+
+                      {signupError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                          {signupError}
+                        </motion.p>
+                      )}
+
+                      <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                        onClick={handlePreSignup} disabled={loading}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                        {loading ? 'Sending code…' : 'Send verification code'}
+                      </motion.button>
+
+                      <button onClick={() => setScreen('email')} className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors">
+                        Already have an account? Sign in
+                      </button>
+                    </div>
+                  </motion.div>
                 )}
 
-                <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
-                  onClick={handleSignup} disabled={loading}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
-                  {loading ? 'Creating account…' : 'Create account'}
-                </motion.button>
+                {/* Step 2: Verify email */}
+                {signupStep === 'verify' && (
+                  <motion.div key="s-verify" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                    <h2 className="font-serif text-3xl text-warmDark mb-2">Check your email</h2>
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-8">
+                      We sent a 6-digit code to{' '}
+                      <span className="text-warmDark/75">{signupEmail}</span>
+                    </p>
 
-                <button onClick={() => setScreen('email')} className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors">
-                  Already have an account? Sign in
-                </button>
-              </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Verification code</label>
+                        <input
+                          type="text" inputMode="numeric" maxLength={6}
+                          value={verifyCode}
+                          onChange={(e) => { setVerifyCode(e.target.value.replace(/\D/g, '')); setVerifyError('') }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSignupVerify()}
+                          placeholder="000000" autoFocus className={codeInputClass}
+                        />
+                      </div>
+
+                      {verifyError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                          {verifyError}
+                        </motion.p>
+                      )}
+                      {resendMsg && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2">
+                          {resendMsg}
+                        </motion.p>
+                      )}
+
+                      <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                        onClick={handleSignupVerify} disabled={loading || verifyCode.length < 6}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                        {loading ? 'Verifying…' : 'Verify email'}
+                      </motion.button>
+
+                      <button onClick={handleSignupResend} disabled={resendLoading}
+                        className="w-full text-center text-warmDark/45 text-sm hover:text-warmDark/70 transition-colors disabled:opacity-50">
+                        {resendLoading ? 'Sending…' : "Didn't receive it? Resend code"}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Step 3: Name + Password */}
+                {signupStep === 'profile' && (
+                  <motion.div key="s-profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                    <h2 className="font-serif text-3xl text-warmDark mb-2">Almost there!</h2>
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-8">Set your name and password</p>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Your name</label>
+                        <input type="text" value={signupName}
+                          onChange={(e) => { setSignupName(e.target.value); setSignupError('') }}
+                          placeholder="Jane Smith" autoFocus className={inputClass}
+                        />
+                      </div>
+                      <div>
+                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Password</label>
+                        <div className="relative">
+                          <input type={showSignupPassword ? 'text' : 'password'} value={signupPassword}
+                            onChange={(e) => { setSignupPassword(e.target.value); setSignupError('') }}
+                            placeholder="8+ chars, A-Z, 0-9, symbol"
+                            className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
+                          <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
+                            {showSignupPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="font-handwriting text-warmDark/50 text-base block mb-2">Confirm password</label>
+                        <input type="password" value={signupConfirm}
+                          onChange={(e) => { setSignupConfirm(e.target.value); setSignupError('') }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleCompleteSignup()}
+                          placeholder="Repeat your password" className={inputClass}
+                        />
+                      </div>
+
+                      {signupError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                          {signupError}
+                        </motion.p>
+                      )}
+
+                      <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                        onClick={handleCompleteSignup} disabled={loading}
+                        className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                        {loading ? 'Creating account…' : 'Create account'}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 
-          {/* ===== EMAIL SCREEN ===== */}
+          {/* ===== EMAIL LOGIN SCREEN ===== */}
           {screen === 'email' && (
             <motion.div
               key="email"
@@ -437,7 +607,7 @@ export default function LoginPage() {
             </motion.div>
           )}
 
-          {/* ===== VERIFY EMAIL SCREEN ===== */}
+          {/* ===== VERIFY EMAIL SCREEN (login-side only) ===== */}
           {screen === 'verify' && (
             <motion.div
               key="verify"
@@ -513,7 +683,6 @@ export default function LoginPage() {
               <h2 className="font-serif text-3xl text-warmDark mb-2">Reset password</h2>
 
               <AnimatePresence mode="wait">
-                {/* Step 1: Enter email */}
                 {forgotStep === 'email' && (
                   <motion.div key="forgot-email" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
                     <p className="font-handwriting text-lg text-warmDark/55 mb-6">Enter your email and we'll send a reset code.</p>
@@ -523,14 +692,12 @@ export default function LoginPage() {
                         onKeyDown={(e) => e.key === 'Enter' && handleForgotSend()}
                         placeholder="you@example.com" autoFocus className={inputClass} />
                     </div>
-
                     {forgotError && (
                       <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                         className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
                         {forgotError}
                       </motion.p>
                     )}
-
                     <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                       onClick={handleForgotSend} disabled={loading}
                       className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
@@ -539,40 +706,30 @@ export default function LoginPage() {
                   </motion.div>
                 )}
 
-                {/* Step 2: Enter code */}
                 {forgotStep === 'code' && (
                   <motion.div key="forgot-code" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">
-                      Check your email for the 6-digit code.
-                    </p>
+                    <p className="font-handwriting text-lg text-warmDark/55 mb-6">Check your email for the 6-digit code.</p>
                     <div>
                       <label className="font-handwriting text-warmDark/50 text-base block mb-2">Reset code</label>
                       <input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
+                        type="text" inputMode="numeric" maxLength={6}
                         value={forgotCode}
                         onChange={(e) => { setForgotCode(e.target.value.replace(/\D/g, '')); setForgotError('') }}
                         onKeyDown={(e) => e.key === 'Enter' && handleForgotVerifyCode()}
-                        placeholder="000000"
-                        autoFocus
-                        className={codeInputClass}
+                        placeholder="000000" autoFocus className={codeInputClass}
                       />
                     </div>
-
                     {forgotError && (
                       <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                         className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
                         {forgotError}
                       </motion.p>
                     )}
-
                     <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                       onClick={handleForgotVerifyCode} disabled={forgotCode.length < 6}
                       className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
                       Continue
                     </motion.button>
-
                     <button onClick={() => { setForgotStep('email'); setForgotCode('') }}
                       className="w-full text-center text-warmDark/40 text-sm hover:text-warmDark/70 transition-colors">
                       Use a different email
@@ -580,7 +737,6 @@ export default function LoginPage() {
                   </motion.div>
                 )}
 
-                {/* Step 3: New password */}
                 {forgotStep === 'newpass' && !forgotSuccess && (
                   <motion.div key="forgot-newpass" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
                     <p className="font-handwriting text-lg text-warmDark/55 mb-6">Enter your new password.</p>
@@ -589,7 +745,7 @@ export default function LoginPage() {
                       <div className="relative">
                         <input type={showForgotPass ? 'text' : 'password'} value={forgotNewPass}
                           onChange={(e) => { setForgotNewPass(e.target.value); setForgotError('') }}
-                          placeholder="At least 6 characters" autoFocus
+                          placeholder="8+ chars, A-Z, 0-9, symbol" autoFocus
                           className="w-full bg-white/40 rounded-2xl px-5 py-4 pr-12 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all border border-white/50" />
                         <button type="button" onClick={() => setShowForgotPass(!showForgotPass)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-warmDark/40 hover:text-warmDark/70 transition-colors">
@@ -604,14 +760,12 @@ export default function LoginPage() {
                         onKeyDown={(e) => e.key === 'Enter' && handleForgotReset()}
                         placeholder="Repeat new password" className={inputClass} />
                     </div>
-
                     {forgotError && (
                       <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                         className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
                         {forgotError}
                       </motion.p>
                     )}
-
                     <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                       onClick={handleForgotReset} disabled={loading}
                       className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
@@ -620,7 +774,6 @@ export default function LoginPage() {
                   </motion.div>
                 )}
 
-                {/* Success */}
                 {forgotSuccess && (
                   <motion.div key="forgot-success" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6">
                     <div className="text-5xl">🎉</div>

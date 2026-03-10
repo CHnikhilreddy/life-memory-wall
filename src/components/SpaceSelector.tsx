@@ -3,6 +3,15 @@ import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Ey
 import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
+
+function validatePassword(p: string): string | null {
+  if (p.length < 8) return 'Password must be at least 8 characters'
+  if (!/[A-Z]/.test(p)) return 'Password must contain at least one uppercase letter'
+  if (!/[a-z]/.test(p)) return 'Password must contain at least one lowercase letter'
+  if (!/[0-9]/.test(p)) return 'Password must contain at least one number'
+  if (!/[^A-Za-z0-9]/.test(p)) return 'Password must contain at least one special character'
+  return null
+}
 import { MemorySpace } from '../types'
 import ParticleBackground from './ParticleBackground'
 
@@ -233,7 +242,8 @@ export default function SpaceSelector() {
   const handleChangePassword = async () => {
     setPwError('')
     if (!oldPassword || !newPassword || !confirmPassword) { setPwError('All fields are required'); return }
-    if (newPassword.length < 6) { setPwError('New password must be at least 6 characters'); return }
+    const pwErr = validatePassword(newPassword)
+    if (pwErr) { setPwError(pwErr); return }
     if (newPassword !== confirmPassword) { setPwError('Passwords do not match'); return }
     setPwLoading(true)
     try {
@@ -772,7 +782,7 @@ export default function SpaceSelector() {
                           type={showNew ? 'text' : 'password'}
                           value={newPassword}
                           onChange={(e) => { setNewPassword(e.target.value); setPwError('') }}
-                          placeholder="At least 6 characters"
+                          placeholder="8+ chars, A-Z, 0-9, symbol"
                           className="w-full bg-white/50 rounded-xl px-4 py-3 pr-11 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all"
                         />
                         <button type="button" onClick={() => setShowNew((v) => !v)}
