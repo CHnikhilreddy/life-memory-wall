@@ -264,7 +264,7 @@ export default function SpaceSelector() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-14 z-20 w-72 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
+                      className="absolute right-0 top-14 z-20 w-60 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
                     >
                       <AnimatePresence mode="wait">
                         {!showInvites ? (
@@ -382,7 +382,13 @@ export default function SpaceSelector() {
                               ) : (
                                 pendingInvites.map((inv) => (
                                   <div key={inv.id} className="px-4 py-3 flex items-center gap-3">
-                                    <span className="text-2xl flex-shrink-0">{inv.spaceEmoji}</span>
+                                    {inv.spaceIcon ? (
+                                      <div className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0">
+                                        <SpaceIconRenderer iconId={inv.spaceIcon} size="full" />
+                                      </div>
+                                    ) : (
+                                      <span className="text-2xl flex-shrink-0">{inv.spaceEmoji}</span>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                       <p className="font-sans text-sm text-warmDark font-medium truncate">{inv.spaceName}</p>
                                       <p className="font-sans text-sm text-warmDark/75">You've been invited</p>
@@ -582,7 +588,7 @@ export default function SpaceSelector() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className="glass rounded-3xl p-8 w-full max-w-lg relative z-10 max-h-[85vh] overflow-y-auto"
+              className={`glass rounded-3xl p-8 w-full relative z-10 max-h-[85vh] overflow-y-auto ${modal === 'members' ? 'max-w-sm' : 'max-w-lg'}`}
               onClick={(e) => e.stopPropagation()}
             >
               <button onClick={closeModal} className="absolute top-4 right-4 text-warmDark/75 hover:text-warmDark/70 transition-colors">

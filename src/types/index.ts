@@ -78,6 +78,7 @@ export interface PendingInvite {
   spaceId: string
   spaceName: string
   spaceEmoji: string
+  spaceIcon?: string
   invitedBy: string
   status: 'pending' | 'rejected'
   createdAt: string
