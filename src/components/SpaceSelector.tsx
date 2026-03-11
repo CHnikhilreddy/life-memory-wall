@@ -240,14 +240,14 @@ export default function SpaceSelector() {
                   if (v) setShowInvites(false) // Reset nested view when closing
                   return !v
                 })}
-                className="relative w-10 h-10 rounded-full bg-gradient-to-br from-gold/40 to-coral/40 flex items-center justify-center shadow-sm hover:shadow-md transition-all border border-white/30"
+                className="relative w-11 h-11 rounded-full bg-gradient-to-br from-gold/60 to-coral/60 flex items-center justify-center shadow-md hover:shadow-lg hover:scale-105 transition-all ring-2 ring-white/50"
                 title="Profile options"
               >
-                <span className="font-serif text-lg text-warmDark font-medium">
+                <span className="font-serif text-lg text-white font-semibold drop-shadow-sm">
                   {currentUser?.name?.[0]?.toUpperCase() || 'U'}
                 </span>
                 {pendingInvites.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-coral rounded-full text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
+                  <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gradient-to-br from-coral to-red-400 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-md ring-2 ring-white/80">
                     {pendingInvites.length}
                   </span>
                 )}
@@ -264,7 +264,7 @@ export default function SpaceSelector() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-12 z-20 w-72 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl shadow-xl overflow-hidden"
+                      className="absolute right-0 top-14 z-20 w-72 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
                     >
                       <AnimatePresence mode="wait">
                         {!showInvites ? (
@@ -276,13 +276,20 @@ export default function SpaceSelector() {
                             transition={{ duration: 0.15 }}
                           >
                             {/* User Info Header */}
-                            <div className="px-5 py-4 border-b border-warmMid/10 bg-warmMid/5">
-                              <p className="font-serif text-lg text-warmDark truncate">
-                                {currentUser?.name || 'User'}
-                              </p>
-                              <p className="font-sans text-sm text-warmDark/75 truncate mt-0.5">
-                                {currentUser?.email || 'user@example.com'}
-                              </p>
+                            <div className="px-5 py-4 border-b border-warmMid/10 bg-gradient-to-r from-gold/10 to-coral/10">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center ring-2 ring-white/60 flex-shrink-0">
+                                  <span className="font-serif text-base text-white font-semibold">{currentUser?.name?.[0]?.toUpperCase() || 'U'}</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-serif text-lg text-warmDark truncate font-medium">
+                                    {currentUser?.name || 'User'}
+                                  </p>
+                                  <p className="font-sans text-xs text-warmDark/55 truncate">
+                                    {currentUser?.email || 'user@example.com'}
+                                  </p>
+                                </div>
+                              </div>
                             </div>
 
                             {/* Menu Items */}
@@ -290,56 +297,62 @@ export default function SpaceSelector() {
                               {pendingInvites.length > 0 && (
                                 <button
                                   onClick={() => setShowInvites(true)}
-                                  className="w-full text-left px-5 py-3 hover:bg-warmMid/10 transition-colors flex items-center justify-between group"
+                                  className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
                                 >
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-sans text-sm text-warmDark/70 group-hover:text-warmDark">Space invitations</span>
-                                    <span className="w-5 h-5 rounded-full bg-coral/10 text-coral text-sm font-bold flex items-center justify-center">
-                                      {pendingInvites.length}
-                                    </span>
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <Mail className="w-4 h-4 text-amber-600/80" />
                                   </div>
-                                  <Mail className="w-4 h-4 text-warmDark/75 group-hover:text-warmDark/70 transition-colors" />
+                                  <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark flex-1">Space invitations</span>
+                                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-coral/80 to-red-400/80 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
+                                    {pendingInvites.length}
+                                  </span>
                                 </button>
                               )}
 
                               {visibleSpaces.length > 0 && (
                                 <button
-                                  onClick={() => { 
+                                  onClick={() => {
                                     setEditPageMode((v) => !v)
                                     setDeleteConfirmId(null)
                                     setShowProfileMenu(false)
                                   }}
-                                  className="w-full text-left px-5 py-3 hover:bg-warmMid/10 transition-colors flex items-center justify-between group"
+                                  className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
                                 >
-                                  <span className={`font-sans text-sm ${editPageMode ? 'text-coral/80 font-medium' : 'text-warmDark/70 group-hover:text-warmDark'}`}>
-                                    {editPageMode ? 'Done Editing Spaces' : 'Edit Spaces'}
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${editPageMode ? 'bg-gradient-to-br from-coral/20 to-red-100' : 'bg-gradient-to-br from-gold/20 to-amber-100'}`}>
+                                    <Pencil className={`w-4 h-4 ${editPageMode ? 'text-coral/80' : 'text-gold/80'}`} />
+                                  </div>
+                                  <span className={`font-sans text-sm ${editPageMode ? 'text-coral/80 font-medium' : 'text-warmDark/75 group-hover:text-warmDark'}`}>
+                                    {editPageMode ? 'Done Editing' : 'Edit Spaces'}
                                   </span>
-                                  {!editPageMode && <Pencil className="w-4 h-4 text-warmDark/75 group-hover:text-warmDark/70 transition-colors" />}
                                 </button>
                               )}
-                              
+
                               <button
                                 onClick={() => {
                                   setModal('change-password')
                                   setShowProfileMenu(false)
                                 }}
-                                className="w-full text-left px-5 py-3 hover:bg-warmMid/10 transition-colors flex items-center justify-between group"
+                                className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
                               >
-                                <span className="font-sans text-sm text-warmDark/70 group-hover:text-warmDark">Change password</span>
-                                <KeyRound className="w-4 h-4 text-warmDark/75 group-hover:text-warmDark/70 transition-colors" />
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
+                                  <KeyRound className="w-4 h-4 text-purple-500/80" />
+                                </div>
+                                <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Change password</span>
                               </button>
                             </div>
 
-                            <div className="border-t border-warmMid/10 py-2 bg-coral/5 hover:bg-coral/10 transition-colors">
-                              <button 
+                            <div className="border-t border-warmMid/10 p-2">
+                              <button
                                 onClick={() => {
                                   setShowProfileMenu(false)
                                   logout()
-                                }} 
-                                className="w-full text-left px-5 py-2.5 flex items-center justify-between group"
+                                }}
+                                className="w-full text-left px-4 py-3 rounded-xl hover:bg-coral/8 transition-all flex items-center gap-3 group"
                               >
-                                <span className="font-sans text-sm text-coral/80 group-hover:text-coral font-medium">Sign out</span>
-                                <LogOut className="w-4 h-4 text-coral/60 group-hover:text-coral transition-colors" />
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral/15 to-red-100 flex items-center justify-center flex-shrink-0">
+                                  <LogOut className="w-4 h-4 text-coral/70" />
+                                </div>
+                                <span className="font-sans text-sm text-coral/75 group-hover:text-coral font-medium">Sign out</span>
                               </button>
                             </div>
                           </motion.div>
@@ -604,7 +617,6 @@ export default function SpaceSelector() {
                       <div className="text-center">
                         <p className="font-serif text-lg text-warmDark font-medium">Group</p>
                         <p className="font-sans text-sm text-warmDark/55 mt-1 leading-snug">Share memories with your circle</p>
-                        <p className="font-sans text-xs text-warmDark/45 mt-1.5 leading-snug">Invite members by email. They can accept or decline from the app.</p>
                       </div>
                     </button>
                   </div>
