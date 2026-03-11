@@ -425,7 +425,7 @@ export default function SpaceSelector() {
         >
           {currentUser && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
-              className="font-handwriting text-lg text-warmDark/70 mb-4">
+              className="font-handwriting text-2xl md:text-3xl text-warmDark/70 mb-4">
               Hello, {currentUser.name}
             </motion.p>
           )}
@@ -530,22 +530,21 @@ export default function SpaceSelector() {
             )
           })}
 
-          {/* Create new */}
-          <motion.button
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: visibleSpaces.length * 0.1 }}
-            whileHover={{ scale: 1.08, y: -8 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setModal('create')}
-            className="group flex flex-col items-center"
-          >
-            <div className="w-28 h-28 md:w-36 md:h-36 rounded-full border-2 border-dashed border-warmMid/25 flex items-center justify-center group-hover:border-gold/50 transition-colors duration-500">
-              <Plus className="w-8 h-8 text-warmDark/70 group-hover:text-gold/60 transition-colors" />
-            </div>
-            <p className="mt-3 font-handwriting text-base text-warmDark/75 group-hover:text-warmDark/70 transition-colors">New Space</p>
-          </motion.button>
         </div>
+
+        {/* Floating "New Space" button — bottom right corner */}
+        <motion.button
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, delay: 0.5, type: 'spring', stiffness: 200 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setModal('create')}
+          className="fixed bottom-8 right-8 z-30 flex items-center gap-2 px-5 py-3.5 rounded-full bg-gradient-to-r from-gold/90 to-coral/90 text-white shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="font-sans font-medium text-sm">New Space</span>
+        </motion.button>
 
       </div>
 
