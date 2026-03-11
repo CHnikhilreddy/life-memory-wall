@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus } from 'lucide-react'
+import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus, ArrowLeft, User } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
@@ -42,6 +42,7 @@ export default function SpaceSelector() {
   const [newColor, setNewColor] = useState('purple-pink')
   const [newDescription, setNewDescription] = useState(randomTaglineForIcon('couple'))
   const [newType, setNewType] = useState<'personal' | 'group'>('personal')
+  const [createStep, setCreateStep] = useState<'type' | 'design'>('type')
   const [viewingSpaceId, setViewingSpaceId] = useState<string | null>(null)
 
   // Edit-mode for spaces page
@@ -68,6 +69,8 @@ export default function SpaceSelector() {
   const [editDescription, setEditDescription] = useState('')
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const [editError, setEditError] = useState('')
   const [showInvites, setShowInvites] = useState(false)
   const [inviteActionId, setInviteActionId] = useState<string | null>(null)
   const [oldPassword, setOldPassword] = useState('')
@@ -88,8 +91,16 @@ export default function SpaceSelector() {
   // Profile Menu
   const [showProfileMenu, setShowProfileMenu] = useState(false)
 
+  // Icon theme (accent variation): 0 = Warm, 1 = Lavender, 2 = Rosy
+  const [selectedTheme, setSelectedTheme] = useState(0)
+
   const handleCreate = async () => {
-    if (!newTitle.trim() || creating) return
+    if (creating) return
+    if (!newTitle.trim()) {
+      setCreateError('Please give your space a name')
+      return
+    }
+    setCreateError('')
     setCreating(true)
     const iconId = makeIconId(newIcon, newIconVariation)
     const space: MemorySpace = {
@@ -138,7 +149,12 @@ export default function SpaceSelector() {
   }
 
   const handleSaveSpace = async () => {
-    if (!editTitle.trim() || !editingSpaceId) return
+    if (!editingSpaceId) return
+    if (!editTitle.trim()) {
+      setEditError('Space name cannot be empty')
+      return
+    }
+    setEditError('')
     const iconId = makeIconId(editIcon, editIconVariation)
     await updateSpace(editingSpaceId, { title: editTitle.trim(), coverIcon: iconId, coverColor: editColor, description: editDescription.trim() || undefined })
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
@@ -180,6 +196,9 @@ export default function SpaceSelector() {
     setPwError(''); setPwSuccess(false)
     setShowProfileMenu(false)
     setRemovingMemberId(null); setLeaveConfirm(false); setMemberActionError('')
+    setCreateStep('type')
+    setCreateError('')
+    setEditError('')
   }
 
   if (loading) {
@@ -548,16 +567,59 @@ export default function SpaceSelector() {
                 <X className="w-5 h-5" />
               </button>
 
-              {/* CREATE */}
-              {modal === 'create' && (
+              {/* CREATE — Step 1: Choose type */}
+              {modal === 'create' && createStep === 'type' && (
                 <>
-                  <h2 className="font-serif text-2xl text-warmDark mb-6">Create a new space</h2>
+                  <h2 className="font-serif text-2xl text-warmDark mb-2">Create a new space</h2>
+                  <p className="font-handwriting text-lg text-warmDark/60 mb-6">What kind of space?</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => { setNewType('personal'); setCreateStep('design') }}
+                      className="group relative flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-purple-50/80 to-pink-50/80 border border-purple-200/40 hover:border-purple-300/60 hover:shadow-lg hover:scale-[1.02] transition-all"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-200/70 to-pink-200/70 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                        <User className="w-7 h-7 text-purple-600/80" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-serif text-lg text-warmDark font-medium">Personal</p>
+                        <p className="font-sans text-sm text-warmDark/55 mt-1 leading-snug">A private space just for you</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => { setNewType('group'); setCreateStep('design') }}
+                      className="group relative flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-amber-50/80 to-orange-50/80 border border-amber-200/40 hover:border-amber-300/60 hover:shadow-lg hover:scale-[1.02] transition-all"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-200/70 to-orange-200/70 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                        <Users className="w-7 h-7 text-amber-600/80" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-serif text-lg text-warmDark font-medium">Group</p>
+                        <p className="font-sans text-sm text-warmDark/55 mt-1 leading-snug">Share memories with your circle</p>
+                        <p className="font-sans text-xs text-warmDark/45 mt-1.5 leading-snug">Invite members by email. They can accept or decline from the app.</p>
+                      </div>
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* CREATE — Step 2: Design */}
+              {modal === 'create' && createStep === 'design' && (
+                <>
+                  <div className="flex items-center gap-2 mb-6">
+                    <button onClick={() => setCreateStep('type')} className="p-1.5 -ml-1.5 rounded-lg text-warmDark/50 hover:text-warmDark/80 hover:bg-white/40 transition-all">
+                      <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <h2 className="font-serif text-2xl text-warmDark">Design your space</h2>
+                  </div>
                   <div className="space-y-5">
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Give it a name</label>
-                      <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
+                      <input type="text" value={newTitle} onChange={(e) => { setNewTitle(e.target.value); setCreateError('') }}
                         placeholder="Thailand Trip 2025..."
-                        className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
+                        className={`w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 transition-all ${createError ? 'ring-2 ring-red-300/60' : 'focus:ring-gold/30'}`} />
+                      {createError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-red-500/80 text-sm font-sans mt-1.5">{createError}</motion.p>
+                      )}
                     </div>
 
                     {/* Icon preview — centered */}
@@ -577,27 +639,39 @@ export default function SpaceSelector() {
                     {/* Icon picker */}
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Choose an icon</label>
+                      {/* Theme toggle buttons */}
+                      <div className="flex gap-2 mb-3">
+                        {([
+                          { label: 'Warm', value: 0 },
+                          { label: 'Lavender', value: 1 },
+                          { label: 'Rosy', value: 2 },
+                        ] as const).map((theme) => (
+                          <button key={theme.value}
+                            onClick={() => { setSelectedTheme(theme.value); setNewIconVariation(theme.value) }}
+                            className={`px-4 py-1.5 rounded-full font-sans text-sm transition-all ${selectedTheme === theme.value ? 'bg-gold/30 text-warmDark ring-1 ring-gold/40 font-medium' : 'bg-white/30 text-warmDark/60 hover:bg-white/50'}`}
+                          >
+                            {theme.label}
+                          </button>
+                        ))}
+                      </div>
                       <div className="max-h-60 overflow-y-auto space-y-4 pr-1">
                         {iconCategories.map((cat) => (
                           <div key={cat}>
                             <p className="font-sans text-sm text-warmDark/70 uppercase tracking-wider mb-2">{cat}</p>
                             <div className="flex flex-wrap gap-2">
                               {getIconsByCategory(cat).map((iconDef) => {
-                                const isSelected = newIcon === iconDef.id
-                                return [0, 1, 2].map((v) => {
-                                  const isThisVariation = isSelected && newIconVariation === v
-                                  return (
-                                    <button key={`${iconDef.id}-${v}`}
-                                      onClick={() => { setNewIcon(iconDef.id); setNewIconVariation(v); setNewDescription(randomTaglineForIcon(iconDef.id)) }}
-                                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all overflow-hidden ${isThisVariation ? 'ring-2 ring-gold/60 scale-110' : 'hover:scale-105'}`}
-                                      title={`${iconDef.name}${v > 0 ? ` (style ${v + 1})` : ''}`}
-                                    >
-                                      <div className="w-14 h-14 rounded-full overflow-hidden">
-                                        <iconDef.component accent={v} />
-                                      </div>
-                                    </button>
-                                  )
-                                })
+                                const isSelected = newIcon === iconDef.id && newIconVariation === selectedTheme
+                                return (
+                                  <button key={iconDef.id}
+                                    onClick={() => { setNewIcon(iconDef.id); setNewIconVariation(selectedTheme); setNewDescription(randomTaglineForIcon(iconDef.id)) }}
+                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all overflow-hidden ${isSelected ? 'ring-2 ring-gold/60 scale-110' : 'hover:scale-105'}`}
+                                    title={iconDef.name}
+                                  >
+                                    <div className="w-14 h-14 rounded-full overflow-hidden">
+                                      <iconDef.component accent={selectedTheme} />
+                                    </div>
+                                  </button>
+                                )
                               })}
                             </div>
                           </div>
@@ -605,22 +679,6 @@ export default function SpaceSelector() {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="font-handwriting text-lg text-warmDark/70 block mb-2">What kind of space?</label>
-                      <div className="flex gap-3">
-                        <button onClick={() => setNewType('personal')}
-                          className={`flex-1 py-3 rounded-xl font-sans text-sm transition-all ${newType === 'personal' ? 'bg-gold/20 text-warmDark ring-1 ring-gold/30' : 'bg-white/30 text-warmDark/70 hover:bg-white/50'}`}>
-                          Personal
-                        </button>
-                        <button onClick={() => setNewType('group')}
-                          className={`flex-1 py-3 rounded-xl font-sans text-sm transition-all ${newType === 'group' ? 'bg-gold/20 text-warmDark ring-1 ring-gold/30' : 'bg-white/30 text-warmDark/70 hover:bg-white/50'}`}>
-                          Group
-                        </button>
-                      </div>
-                      {newType === 'group' && (
-                        <p className="text-sm text-warmDark/75 mt-2 font-sans">Invite members by email. They can accept or decline from the app.</p>
-                      )}
-                    </div>
                     <div className="flex gap-3 pt-2">
                       <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all">Cancel</button>
                       <button onClick={handleCreate} disabled={creating} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2">
@@ -638,9 +696,12 @@ export default function SpaceSelector() {
                   <div className="space-y-5">
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Name</label>
-                      <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+                      <input type="text" value={editTitle} onChange={(e) => { setEditTitle(e.target.value); setEditError('') }}
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveSpace()}
-                        className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
+                        className={`w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 transition-all ${editError ? 'ring-2 ring-red-300/60' : 'focus:ring-gold/30'}`} />
+                      {editError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-red-500/80 text-sm font-sans mt-1.5">{editError}</motion.p>
+                      )}
                     </div>
 
                     {/* Icon preview — centered */}
@@ -660,27 +721,39 @@ export default function SpaceSelector() {
                     {/* Icon picker */}
                     <div>
                       <label className="font-handwriting text-lg text-warmDark/70 block mb-2">Icon</label>
+                      {/* Theme toggle buttons */}
+                      <div className="flex gap-2 mb-3">
+                        {([
+                          { label: 'Warm', value: 0 },
+                          { label: 'Lavender', value: 1 },
+                          { label: 'Rosy', value: 2 },
+                        ] as const).map((theme) => (
+                          <button key={theme.value}
+                            onClick={() => { setSelectedTheme(theme.value); setEditIconVariation(theme.value) }}
+                            className={`px-4 py-1.5 rounded-full font-sans text-sm transition-all ${selectedTheme === theme.value ? 'bg-gold/30 text-warmDark ring-1 ring-gold/40 font-medium' : 'bg-white/30 text-warmDark/60 hover:bg-white/50'}`}
+                          >
+                            {theme.label}
+                          </button>
+                        ))}
+                      </div>
                       <div className="max-h-60 overflow-y-auto space-y-4 pr-1">
                         {iconCategories.map((cat) => (
                           <div key={cat}>
                             <p className="font-sans text-sm text-warmDark/70 uppercase tracking-wider mb-2">{cat}</p>
                             <div className="flex flex-wrap gap-2">
                               {getIconsByCategory(cat).map((iconDef) => {
-                                const isSelected = editIcon === iconDef.id
-                                return [0, 1, 2].map((v) => {
-                                  const isThisVariation = isSelected && editIconVariation === v
-                                  return (
-                                    <button key={`${iconDef.id}-${v}`}
-                                      onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(v) }}
-                                      className={`w-14 h-14 rounded-full flex items-center justify-center transition-all overflow-hidden ${isThisVariation ? 'ring-2 ring-gold/60 scale-110' : 'hover:scale-105'}`}
-                                      title={`${iconDef.name}${v > 0 ? ` (style ${v + 1})` : ''}`}
-                                    >
-                                      <div className="w-14 h-14 rounded-full overflow-hidden">
-                                        <iconDef.component accent={v} />
-                                      </div>
-                                    </button>
-                                  )
-                                })
+                                const isSelected = editIcon === iconDef.id && editIconVariation === selectedTheme
+                                return (
+                                  <button key={iconDef.id}
+                                    onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(selectedTheme) }}
+                                    className={`w-14 h-14 rounded-full flex items-center justify-center transition-all overflow-hidden ${isSelected ? 'ring-2 ring-gold/60 scale-110' : 'hover:scale-105'}`}
+                                    title={iconDef.name}
+                                  >
+                                    <div className="w-14 h-14 rounded-full overflow-hidden">
+                                      <iconDef.component accent={selectedTheme} />
+                                    </div>
+                                  </button>
+                                )
                               })}
                             </div>
                           </div>
