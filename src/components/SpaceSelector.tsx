@@ -472,25 +472,35 @@ export default function SpaceSelector() {
                   {/* Edit mode overlays */}
                   {editPageMode && isOwner && (
                     <>
-                      <button
+                      <motion.button
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, delay: 0.1 }}
                         onClick={() => openEditSpace(space)}
-                        className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-warmDark/70 hover:text-warmDark transition-colors z-10 border border-warmMid/10"
+                        className="absolute -top-2 -right-2 w-9 h-9 rounded-full bg-gradient-to-br from-gold/80 to-amber-400/80 shadow-lg flex items-center justify-center text-white hover:shadow-xl hover:scale-110 transition-all z-10 ring-2 ring-white/80"
                       >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
+                        <Pencil className="w-4 h-4" />
+                      </motion.button>
                       {!isDelConfirm ? (
-                        <button
+                        <motion.button
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, delay: 0.15 }}
                           onClick={() => setDeleteConfirmId(space.id)}
-                          className="absolute -top-1 -left-1 w-8 h-8 rounded-full bg-white shadow-md flex items-center justify-center text-coral/60 hover:text-coral transition-colors z-10 border border-warmMid/10"
+                          className="absolute -top-2 -left-2 w-9 h-9 rounded-full bg-gradient-to-br from-coral/80 to-red-400/80 shadow-lg flex items-center justify-center text-white hover:shadow-xl hover:scale-110 transition-all z-10 ring-2 ring-white/80"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
                       ) : (
-                        <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-2 z-20 whitespace-nowrap border border-warmMid/10">
+                        <motion.div
+                          initial={{ opacity: 0, y: 6, scale: 0.9 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          className="absolute -top-12 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl px-4 py-2.5 flex items-center gap-3 z-20 whitespace-nowrap border border-warmMid/15"
+                        >
                           <span className="text-sm text-warmDark/70 font-sans">Delete?</span>
-                          <button onClick={() => handleDeleteSpace(space.id)} className="text-sm text-coral font-medium hover:text-coral/70">Yes</button>
-                          <button onClick={() => setDeleteConfirmId(null)} className="text-sm text-warmDark/75 hover:text-warmDark/70">No</button>
-                        </div>
+                          <button onClick={() => handleDeleteSpace(space.id)} className="text-sm text-white font-medium bg-gradient-to-r from-coral/80 to-red-400/80 px-3 py-1 rounded-full hover:shadow-md transition-all">Yes</button>
+                          <button onClick={() => setDeleteConfirmId(null)} className="text-sm text-warmDark/60 hover:text-warmDark/80 font-medium transition-colors">No</button>
+                        </motion.div>
                       )}
                     </>
                   )}
