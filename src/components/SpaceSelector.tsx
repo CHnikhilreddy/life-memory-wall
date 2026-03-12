@@ -96,6 +96,8 @@ export default function SpaceSelector() {
   const [editIconVariation, setEditIconVariation] = useState(0)
   const [editColor, setEditColor] = useState('purple-pink')
   const [editDescription, setEditDescription] = useState('')
+  const [editCoverImage, setEditCoverImage] = useState('')
+  const [editCoverImageUploading, setEditCoverImageUploading] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleteConfirmSpace, setDeleteConfirmSpace] = useState<MemorySpace | null>(null)
   const [creating, setCreating] = useState(false)
@@ -181,6 +183,7 @@ export default function SpaceSelector() {
   const openEditSpace = (space: MemorySpace) => {
     setEditingSpaceId(space.id)
     setEditTitle(space.title)
+    setEditCoverImage(space.coverImage || '')
     if (space.coverIcon) {
       const base = space.coverIcon.replace(/-[0-2]$/, '')
       const variation = getIconVariation(space.coverIcon)
@@ -203,7 +206,7 @@ export default function SpaceSelector() {
     }
     setEditError('')
     const iconId = makeIconId(editIcon, editIconVariation)
-    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverIcon: iconId, coverColor: editColor, description: editDescription.trim() || undefined })
+    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage || undefined, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
@@ -266,6 +269,7 @@ export default function SpaceSelector() {
     setRemovingMemberId(null); setLeaveConfirm(false); setMemberActionError('')
     setCreateStep('type')
     setNewCoverImage('')
+    setEditCoverImage('')
     setCreatedSpaceId(null)
     setInviteInput('')
     setInvitedEmails([])
@@ -960,11 +964,49 @@ export default function SpaceSelector() {
                       )}
                     </div>
 
-                    {/* Icon preview — centered */}
+                    {/* Cover preview — image or icon */}
                     <div className="flex flex-col items-center gap-3">
-                      <div className={`w-28 h-28 rounded-full bg-gradient-to-br ${getColorClasses(editColor)} flex items-center justify-center border border-white/50 shadow-lg overflow-hidden`}>
-                        <SpaceIconRenderer iconId={makeIconId(editIcon, editIconVariation)} size="full" />
+                      <div className="relative group/cover">
+                        <div className={`w-28 h-28 rounded-full border border-white/50 shadow-lg overflow-hidden flex items-center justify-center
+                          ${editCoverImage ? '' : `bg-gradient-to-br ${getColorClasses(editColor)}`}`}>
+                          {editCoverImage ? (
+                            <img src={editCoverImage} alt="cover" className="w-full h-full object-cover" />
+                          ) : (
+                            <SpaceIconRenderer iconId={makeIconId(editIcon, editIconVariation)} size="full" />
+                          )}
+                        </div>
+                        <label className="absolute inset-0 rounded-full flex items-center justify-center bg-warmDark/30 opacity-0 group-hover/cover:opacity-100 transition-opacity cursor-pointer">
+                          {editCoverImageUploading ? (
+                            <Loader2 className="w-6 h-6 text-white animate-spin" />
+                          ) : (
+                            <ImagePlus className="w-6 h-6 text-white" />
+                          )}
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+                            setEditCoverImageUploading(true)
+                            try {
+                              const url = await uploadImage(file)
+                              setEditCoverImage(url)
+                            } catch {
+                              // silently fail
+                            } finally {
+                              setEditCoverImageUploading(false)
+                              e.target.value = ''
+                            }
+                          }} />
+                        </label>
+                        {editCoverImage && (
+                          <button
+                            type="button"
+                            onClick={() => setEditCoverImage('')}
+                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-warmDark/70 text-white flex items-center justify-center hover:bg-warmDark transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
+                      <p className="text-xs font-sans text-warmDark/50">Hover to change photo</p>
                       <div className="text-center">
                         <p className="font-handwriting text-warmDark/70 text-lg italic">{editDescription || 'No tagline set'}</p>
                         <button type="button" onClick={() => setEditDescription(randomTaglineForIcon(editIcon))}
