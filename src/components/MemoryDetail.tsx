@@ -43,6 +43,7 @@ const storyGradients = [
 export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateSubstory, onDeleteSubstory, canEdit = true }: Props) {
   const [activeTab, setActiveTab] = useState<'timeline' | 'photos'>('timeline')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [addFormStep, setAddFormStep] = useState<'pick' | 'edit'>('pick')
   const [newTitle, setNewTitle] = useState('')
   const [newContent, setNewContent] = useState('')
   const [newType, setNewType] = useState<'text' | 'photo' | 'photos' | 'img-left' | 'img-right' | 'img-top' | 'img-bottom'>('text')
@@ -78,7 +79,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
 
   const resetForm = () => {
     setNewTitle(''); setNewContent(''); setNewPhotos([])
-    setNewType('text'); setEditingSubstoryId(null); setShowAddForm(false)
+    setNewType('text'); setEditingSubstoryId(null); setShowAddForm(false); setAddFormStep('pick')
   }
 
   const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').trim()
@@ -108,6 +109,7 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
     setNewContent(sub.content || sub.caption || '')
     setNewType(sub.type)
     setNewPhotos(sub.photos || [])
+    setAddFormStep('edit')
     setShowAddForm(true)
   }
 
@@ -574,177 +576,200 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white/30 rounded-2xl p-6 border border-white/40"
                   >
-                    <h4 className="font-serif text-xl text-warmDark mb-5">Add a moment</h4>
-
-                    {/* Layout template picker */}
-                    <div className="mb-5">
-                      <p className="font-handwriting text-warmDark/70 text-base mb-2">Choose a layout</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[
-                          {
-                            type: 'text' as const,
-                            label: 'Story',
-                            preview: (
-                              <div className="flex flex-col gap-1 w-full px-1">
-                                <div className="h-1.5 bg-warmDark/25 rounded-full w-full" />
-                                <div className="h-1.5 bg-warmDark/15 rounded-full w-4/5" />
-                                <div className="h-1.5 bg-warmDark/15 rounded-full w-full" />
-                                <div className="h-1.5 bg-warmDark/15 rounded-full w-3/5" />
-                              </div>
-                            ),
-                          },
-                          {
-                            type: 'img-left' as const,
-                            label: 'Photo left',
-                            preview: (
-                              <div className="flex gap-1 w-full px-1">
-                                <div className="w-1/2 h-10 bg-gold/30 rounded" />
-                                <div className="flex-1 flex flex-col gap-1 justify-center">
-                                  <div className="h-1.5 bg-warmDark/20 rounded-full w-full" />
-                                  <div className="h-1.5 bg-warmDark/12 rounded-full w-4/5" />
-                                  <div className="h-1.5 bg-warmDark/12 rounded-full w-full" />
+                    <AnimatePresence mode="wait">
+                      {/* ── Step 1: Pick a layout ── */}
+                      {addFormStep === 'pick' && (
+                        <motion.div key="pick" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
+                          <div className="flex items-center justify-between mb-5">
+                            <h4 className="font-serif text-xl text-warmDark">Choose a layout</h4>
+                            <button onClick={resetForm} className="text-warmDark/40 hover:text-warmDark/70 transition-colors"><X className="w-5 h-5" /></button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {[
+                              {
+                                type: 'text' as const,
+                                label: 'Story',
+                                desc: 'Just text',
+                                preview: (
+                                  <div className="flex flex-col gap-1.5 w-full px-2 py-1">
+                                    <div className="h-2 bg-warmDark/25 rounded-full w-full" />
+                                    <div className="h-2 bg-warmDark/15 rounded-full w-4/5" />
+                                    <div className="h-2 bg-warmDark/15 rounded-full w-full" />
+                                    <div className="h-2 bg-warmDark/15 rounded-full w-3/5" />
+                                  </div>
+                                ),
+                              },
+                              {
+                                type: 'img-left' as const,
+                                label: 'Photo left',
+                                desc: 'Image + text side by side',
+                                preview: (
+                                  <div className="flex gap-1.5 w-full px-2 py-1">
+                                    <div className="w-2/5 h-14 bg-gold/35 rounded-lg" />
+                                    <div className="flex-1 flex flex-col gap-1.5 justify-center">
+                                      <div className="h-2 bg-warmDark/20 rounded-full w-full" />
+                                      <div className="h-2 bg-warmDark/12 rounded-full w-4/5" />
+                                      <div className="h-2 bg-warmDark/12 rounded-full w-full" />
+                                    </div>
+                                  </div>
+                                ),
+                              },
+                              {
+                                type: 'img-right' as const,
+                                label: 'Photo right',
+                                desc: 'Text + image side by side',
+                                preview: (
+                                  <div className="flex gap-1.5 w-full px-2 py-1">
+                                    <div className="flex-1 flex flex-col gap-1.5 justify-center">
+                                      <div className="h-2 bg-warmDark/20 rounded-full w-full" />
+                                      <div className="h-2 bg-warmDark/12 rounded-full w-4/5" />
+                                      <div className="h-2 bg-warmDark/12 rounded-full w-full" />
+                                    </div>
+                                    <div className="w-2/5 h-14 bg-coral/35 rounded-lg" />
+                                  </div>
+                                ),
+                              },
+                              {
+                                type: 'img-top' as const,
+                                label: 'Photo top',
+                                desc: 'Image above text',
+                                preview: (
+                                  <div className="flex flex-col gap-1.5 w-full px-2 py-1">
+                                    <div className="h-10 bg-lavender/50 rounded-lg w-full" />
+                                    <div className="h-2 bg-warmDark/20 rounded-full w-full" />
+                                    <div className="h-2 bg-warmDark/12 rounded-full w-4/5" />
+                                  </div>
+                                ),
+                              },
+                              {
+                                type: 'img-bottom' as const,
+                                label: 'Photo below',
+                                desc: 'Text above image',
+                                preview: (
+                                  <div className="flex flex-col gap-1.5 w-full px-2 py-1">
+                                    <div className="h-2 bg-warmDark/20 rounded-full w-full" />
+                                    <div className="h-2 bg-warmDark/12 rounded-full w-4/5" />
+                                    <div className="h-10 bg-teal/35 rounded-lg w-full" />
+                                  </div>
+                                ),
+                              },
+                              {
+                                type: 'photos' as const,
+                                label: 'Photo grid',
+                                desc: 'Gallery of images',
+                                preview: (
+                                  <div className="grid grid-cols-2 gap-1 w-full px-2 py-1">
+                                    <div className="h-7 bg-gold/30 rounded-lg" />
+                                    <div className="h-7 bg-coral/30 rounded-lg" />
+                                    <div className="h-7 bg-lavender/40 rounded-lg" />
+                                    <div className="h-7 bg-teal/30 rounded-lg" />
+                                  </div>
+                                ),
+                              },
+                            ].map(({ type, label, desc, preview }) => (
+                              <button
+                                key={type}
+                                onClick={() => { setNewType(type); setAddFormStep('edit') }}
+                                className="flex flex-col items-center gap-2 p-3 rounded-xl border border-warmMid/10 hover:border-gold/40 hover:bg-gold/5 hover:shadow-md transition-all text-left"
+                              >
+                                <div className="w-full h-16 flex items-center justify-center bg-white/40 rounded-lg">
+                                  {preview}
                                 </div>
-                              </div>
-                            ),
-                          },
-                          {
-                            type: 'img-right' as const,
-                            label: 'Photo right',
-                            preview: (
-                              <div className="flex gap-1 w-full px-1">
-                                <div className="flex-1 flex flex-col gap-1 justify-center">
-                                  <div className="h-1.5 bg-warmDark/20 rounded-full w-full" />
-                                  <div className="h-1.5 bg-warmDark/12 rounded-full w-4/5" />
-                                  <div className="h-1.5 bg-warmDark/12 rounded-full w-full" />
+                                <div className="w-full">
+                                  <p className="font-sans text-sm font-medium text-warmDark leading-none">{label}</p>
+                                  <p className="font-sans text-xs text-warmDark/50 mt-0.5">{desc}</p>
                                 </div>
-                                <div className="w-1/2 h-10 bg-coral/30 rounded" />
-                              </div>
-                            ),
-                          },
-                          {
-                            type: 'img-top' as const,
-                            label: 'Photo top',
-                            preview: (
-                              <div className="flex flex-col gap-1 w-full px-1">
-                                <div className="h-7 bg-lavender/50 rounded w-full" />
-                                <div className="h-1.5 bg-warmDark/20 rounded-full w-full" />
-                                <div className="h-1.5 bg-warmDark/12 rounded-full w-4/5" />
-                              </div>
-                            ),
-                          },
-                          {
-                            type: 'img-bottom' as const,
-                            label: 'Photo below',
-                            preview: (
-                              <div className="flex flex-col gap-1 w-full px-1">
-                                <div className="h-1.5 bg-warmDark/20 rounded-full w-full" />
-                                <div className="h-1.5 bg-warmDark/12 rounded-full w-4/5" />
-                                <div className="h-7 bg-teal/30 rounded w-full" />
-                              </div>
-                            ),
-                          },
-                          {
-                            type: 'photos' as const,
-                            label: 'Photo grid',
-                            preview: (
-                              <div className="grid grid-cols-2 gap-1 w-full px-1">
-                                <div className="h-5 bg-gold/25 rounded" />
-                                <div className="h-5 bg-coral/25 rounded" />
-                                <div className="h-5 bg-lavender/35 rounded" />
-                                <div className="h-5 bg-teal/25 rounded" />
-                              </div>
-                            ),
-                          },
-                        ].map(({ type, label, preview }) => (
-                          <button
-                            key={type}
-                            onClick={() => setNewType(type)}
-                            className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all ${
-                              newType === type
-                                ? 'border-gold/50 bg-gold/8 ring-1 ring-gold/25'
-                                : 'border-warmMid/10 hover:border-warmMid/20 hover:bg-white/20'
-                            }`}
-                          >
-                            <div className="w-full h-12 flex items-center justify-center">
-                              {preview}
-                            </div>
-                            <span className="font-sans text-sm text-warmDark/75 leading-none">{label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <input
-                      type="text"
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="Title for this moment..."
-                      className="w-full font-serif text-lg text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-4 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/70"
-                    />
-
-                    <RichTextEditor
-                      value={newContent}
-                      onChange={setNewContent}
-                      placeholder={newType === 'text' ? 'Write down what happened...' : 'Add a caption...'}
-                      className="mb-4"
-                    />
-
-                    {newType !== 'text' && (
-                      <div className="mb-4">
-                        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
-                          onChange={(e) => handlePhotoFiles(Array.from(e.target.files || []), setNewPhotos, fileInputRef)} />
-                        {newPhotos.length > 0 && (
-                          <div className="grid grid-cols-3 gap-2 mb-3">
-                            {newPhotos.map((url, i) => (
-                              <div key={i} className="relative group aspect-square rounded-xl overflow-hidden">
-                                <img src={url} alt="" className="w-full h-full object-cover" />
-                                <button
-                                  type="button"
-                                  onClick={() => setNewPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-                                  className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <X className="w-3.5 h-3.5 text-white" />
-                                </button>
-                              </div>
+                              </button>
                             ))}
                           </div>
-                        )}
-                        {uploading ? (
-                          <div className="flex items-center justify-center gap-2 text-warmDark/75 py-4">
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            <span className="text-sm">Uploading...</span>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-2 gap-2">
-                            <button type="button" onClick={() => fileInputRef.current?.click()}
-                              className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
-                              <Upload className="w-5 h-5 text-warmDark/70" />
-                              <span className="text-sm text-warmDark/70">From Device</span>
-                            </button>
-                            <button type="button" onClick={() => fileInputRef.current?.click()}
-                              className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
-                              <Images className="w-5 h-5 text-warmDark/70" />
-                              <span className="text-sm text-warmDark/70">Google Photos</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                        </motion.div>
+                      )}
 
-                    <div className="flex gap-3">
-                      <button
-                        onClick={resetForm}
-                        className="flex-1 py-3 rounded-xl text-warmDark/75 hover:bg-white/20 transition-all"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveSubstory}
-                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-medium"
-                      >
-                        Add moment
-                      </button>
-                    </div>
+                      {/* ── Step 2: Edit form for chosen layout ── */}
+                      {addFormStep === 'edit' && (
+                        <motion.div key="edit" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}>
+                          <div className="flex items-center gap-2 mb-5">
+                            <button onClick={() => { setAddFormStep('pick'); setNewTitle(''); setNewContent(''); setNewPhotos([]) }}
+                              className="p-1.5 -ml-1 rounded-lg text-warmDark/50 hover:text-warmDark/80 hover:bg-white/40 transition-all">
+                              <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <h4 className="font-serif text-xl text-warmDark flex-1">
+                              {editingSubstoryId ? 'Edit moment' : {
+                                'text': 'Story',
+                                'img-left': 'Photo left',
+                                'img-right': 'Photo right',
+                                'img-top': 'Photo top',
+                                'img-bottom': 'Photo below',
+                                'photos': 'Photo grid',
+                                'photo': 'Photo',
+                              }[newType]}
+                            </h4>
+                            <button onClick={resetForm} className="text-warmDark/40 hover:text-warmDark/70 transition-colors"><X className="w-5 h-5" /></button>
+                          </div>
+
+                          <input
+                            type="text"
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                            placeholder="Title for this moment..."
+                            className="w-full font-serif text-lg text-warmDark bg-transparent border-b border-warmMid/10 pb-2 mb-4 outline-none focus:border-gold/40 transition-colors placeholder:text-warmDark/70"
+                          />
+
+                          <RichTextEditor
+                            value={newContent}
+                            onChange={setNewContent}
+                            placeholder={newType === 'text' ? 'Write down what happened...' : 'Add a caption...'}
+                            className="mb-4"
+                          />
+
+                          {newType !== 'text' && (
+                            <div className="mb-4">
+                              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+                                onChange={(e) => handlePhotoFiles(Array.from(e.target.files || []), setNewPhotos, fileInputRef)} />
+                              {newPhotos.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                  {newPhotos.map((url, i) => (
+                                    <div key={i} className="relative group aspect-square rounded-xl overflow-hidden">
+                                      <img src={url} alt="" className="w-full h-full object-cover" />
+                                      <button type="button" onClick={() => setNewPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                                        className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <X className="w-3.5 h-3.5 text-white" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {uploading ? (
+                                <div className="flex items-center justify-center gap-2 text-warmDark/75 py-4">
+                                  <Loader2 className="w-5 h-5 animate-spin" />
+                                  <span className="text-sm">Uploading...</span>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-2 gap-2">
+                                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
+                                    <Upload className="w-5 h-5 text-warmDark/70" />
+                                    <span className="text-sm text-warmDark/70">From Device</span>
+                                  </button>
+                                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                                    className="border-2 border-dashed border-warmMid/10 rounded-xl p-4 flex flex-col items-center gap-1.5 hover:border-gold/25 transition-colors">
+                                    <Images className="w-5 h-5 text-warmDark/70" />
+                                    <span className="text-sm text-warmDark/70">Google Photos</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          <div className="flex gap-3">
+                            <button onClick={resetForm} className="flex-1 py-3 rounded-xl text-warmDark/75 hover:bg-white/20 transition-all">Cancel</button>
+                            <button onClick={handleSaveSubstory} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-medium">
+                              {editingSubstoryId ? 'Save changes' : 'Add moment'}
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 ) : null}
               </div>
