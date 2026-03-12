@@ -124,6 +124,15 @@ export const api = {
   deleteSpace: (spaceId: string) =>
     request<any>(`/spaces/${spaceId}`, { method: 'DELETE' }),
 
+  updateProfile: (data: { name?: string }) =>
+    request<{ success: boolean; user: any }>('/auth/profile', { method: 'PATCH', body: JSON.stringify(data) }),
+
+  sendLoginCode: (email: string) =>
+    request<{ success: boolean }>('/auth/send-login-code', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  loginWithCode: (email: string, code: string) =>
+    request<{ user: any; token: string }>('/auth/login-with-code', { method: 'POST', body: JSON.stringify({ email, code }) }),
+
   changePassword: (oldPassword: string, newPassword: string) =>
     request<{ success: boolean }>('/auth/change-password', { method: 'POST', body: JSON.stringify({ oldPassword, newPassword }) }),
 

@@ -14,6 +14,8 @@ interface AppState {
 
   init: () => Promise<void>
   login: (credentials?: { email?: string; phone?: string; name?: string; password?: string }) => Promise<void>
+  loginWithCode: (email: string, code: string) => Promise<void>
+  setCurrentUser: (user: User) => void
   logout: () => void
   fetchSpaces: () => Promise<void>
   fetchMyInvites: () => Promise<void>
@@ -86,6 +88,16 @@ export const useStore = create<AppState>((set, get) => ({
     set({ isLoggedIn: true, currentUser: result.user })
     await Promise.all([get().fetchSpaces(), get().fetchMyInvites()])
   },
+
+  loginWithCode: async (email, code) => {
+    const result = await api.loginWithCode(email, code)
+    setToken(result.token)
+    localStorage.removeItem('activeSpaceId')
+    set({ isLoggedIn: true, currentUser: result.user })
+    await Promise.all([get().fetchSpaces(), get().fetchMyInvites()])
+  },
+
+  setCurrentUser: (user) => set({ currentUser: user }),
 
   logout: () => {
     clearToken()

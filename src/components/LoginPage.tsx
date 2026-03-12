@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { ArrowLeft, Mail, Eye, EyeOff, UserPlus, Camera, Heart, Lock, Users, Image, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Eye, EyeOff, UserPlus, Camera, Heart, Lock, Users, Image, MessageCircle, KeyRound } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { api, setToken } from '../api'
 import ParticleBackground from './ParticleBackground'
@@ -9,7 +9,7 @@ import { validatePassword } from '../utils/validation'
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
 
 type Screen = 'main' | 'email' | 'signup' | 'verify' | 'forgot'
-type EmailStep = 'enter' | 'password'
+type EmailStep = 'enter' | 'password' | 'code'
 type ForgotStep = 'email' | 'code' | 'newpass'
 type SignupStep = 'email' | 'verify' | 'profile'
 
@@ -193,6 +193,7 @@ function LoginShowcase() {
 
 export default function LoginPage() {
   const login = useStore((s) => s.login)
+  const loginWithCode = useStore((s) => s.loginWithCode)
   const fetchSpaces = useStore((s) => s.fetchSpaces)
   const [screen, setScreen] = useState<Screen>('main')
 
@@ -203,6 +204,8 @@ export default function LoginPage() {
   const [emailStep, setEmailStep] = useState<EmailStep>('enter')
   const [loginError, setLoginError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loginCode, setLoginCode] = useState('')
+  const [codeSending, setCodeSending] = useState(false)
 
   // Signup flow
   const [signupStep, setSignupStep] = useState<SignupStep>('email')
@@ -274,6 +277,37 @@ export default function LoginPage() {
     setEmailStep('password')
   }
 
+  const handleSendLoginCode = async () => {
+    setCodeSending(true)
+    setLoginError('')
+    try {
+      await api.sendLoginCode(email.trim().toLowerCase())
+      setEmailStep('code')
+      setLoginCode('')
+    } catch (err: any) {
+      if (err.noAccount) {
+        setLoginError('__noAccount__')
+      } else {
+        setLoginError(err.message || 'Failed to send code')
+      }
+    } finally {
+      setCodeSending(false)
+    }
+  }
+
+  const handleCodeLogin = async () => {
+    if (!loginCode.trim() || loginCode.length < 6) return
+    setLoading(true)
+    setLoginError('')
+    try {
+      await loginWithCode(email.trim().toLowerCase(), loginCode.trim())
+    } catch (err: any) {
+      setLoginError(err.message || 'Invalid code')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleEmailLogin = async () => {
     if (!password.trim()) return
     setLoading(true)
@@ -284,7 +318,6 @@ export default function LoginPage() {
       if (err.emailNotVerified && err.userId) {
         goToVerify(err.userId)
       } else if (err.incompleteSignup && err.userId) {
-        // They verified email but never set name+password — send to profile step
         setSignupUserId(err.userId)
         setSignupEmail(email.trim().toLowerCase())
         setSignupStep('profile')
@@ -694,7 +727,7 @@ export default function LoginPage() {
 
               <h2 className="font-serif text-3xl text-warmDark mb-2">Welcome back</h2>
               <p className="font-handwriting text-xl text-warmDark/75 mb-8">
-                {emailStep === 'enter' ? 'Enter your email to continue' : `Signing in as ${email}`}
+                {emailStep === 'enter' ? 'Enter your email to continue' : emailStep === 'code' ? `Enter the code sent to ${email}` : `Signing in as ${email}`}
               </p>
 
               <AnimatePresence mode="wait">
@@ -720,7 +753,7 @@ export default function LoginPage() {
                       No account? Create one
                     </button>
                   </motion.div>
-                ) : (
+                ) : emailStep === 'password' ? (
                   <motion.div key="password-input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
                     <div>
                       <div className="relative">
@@ -770,6 +803,59 @@ export default function LoginPage() {
                         onClick={() => { setForgotEmail(email); setForgotStep('email'); setScreen('forgot') }}
                         className="text-warmDark/70 text-sm hover:text-warmDark/70 transition-colors">
                         Forgot password?
+                      </button>
+                    </div>
+
+                    <button onClick={handleSendLoginCode} disabled={codeSending}
+                      className="w-full text-center text-warmDark/60 text-sm hover:text-warmDark/80 transition-colors disabled:opacity-50">
+                      {codeSending ? 'Sending code…' : 'Sign in with code instead'}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div key="code-input" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+                    <div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        value={loginCode}
+                        onChange={(e) => { setLoginCode(e.target.value.replace(/\D/g, '')); setLoginError('') }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCodeLogin()}
+                        placeholder="000000"
+                        autoFocus
+                        className={`w-full bg-white/40 rounded-2xl px-5 py-4 text-warmDark font-sans text-center text-2xl tracking-[0.5em] outline-none transition-all border ${loginError ? 'border-coral/50 focus:ring-2 focus:ring-coral/30' : 'border-white/50 focus:ring-2 focus:ring-gold/30'}`}
+                      />
+                    </div>
+
+                    {loginError && (
+                      <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                        {loginError === '__noAccount__' ? (
+                          <span>
+                            No account found with this email.{' '}
+                            <button onClick={() => { setScreen('signup'); setSignupEmail(email); setLoginError('') }}
+                              className="underline font-medium hover:text-coral/70">
+                              Sign up instead
+                            </button>
+                          </span>
+                        ) : loginError}
+                      </motion.div>
+                    )}
+
+                    <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                      onClick={handleCodeLogin} disabled={loading || loginCode.length < 6}
+                      className="w-full py-4 rounded-2xl bg-gradient-to-r from-gold/80 to-coral/70 text-white font-serif text-lg disabled:opacity-60">
+                      {loading ? 'Verifying…' : 'Verify & sign in'}
+                    </motion.button>
+
+                    <div className="flex items-center justify-between">
+                      <button onClick={() => { setEmailStep('password'); setLoginError(''); setLoginCode('') }}
+                        className="text-warmDark/70 text-sm hover:text-warmDark/80 transition-colors">
+                        Use password instead
+                      </button>
+                      <button onClick={handleSendLoginCode} disabled={codeSending}
+                        className="text-warmDark/70 text-sm hover:text-warmDark/80 transition-colors disabled:opacity-50">
+                        {codeSending ? 'Sending…' : 'Resend code'}
                       </button>
                     </div>
                   </motion.div>
