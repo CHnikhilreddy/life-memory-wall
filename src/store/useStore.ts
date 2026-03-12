@@ -244,7 +244,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   addSpace: async (space) => {
     try {
-      await api.createSpace({
+      const created = await api.createSpace({
         title: space.title,
         coverEmoji: space.coverEmoji,
         coverIcon: space.coverIcon,
@@ -253,8 +253,10 @@ export const useStore = create<AppState>((set, get) => ({
         description: space.description,
       })
       await get().fetchSpaces()
+      return created?.id ?? null
     } catch (err) {
       console.error('Failed to create space:', err)
+      return null
     }
   },
 
