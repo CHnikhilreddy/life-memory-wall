@@ -295,12 +295,12 @@ export default function SpaceSelector() {
   }
 
   return (
-    <div className="min-h-screen gradient-bg relative overflow-hidden">
+    <div className="h-full gradient-bg relative overflow-hidden">
       <ParticleBackground />
 
-      <div className="relative z-10 min-h-screen flex flex-col items-center px-4 py-12 md:py-20">
+      <div className="relative z-10 h-full overflow-y-auto flex flex-col items-center px-4 pt-16 pb-8">
         {/* Top Right Controls */}
-        <div className="absolute top-6 right-6 flex items-center gap-3 z-30">
+        <div className="fixed top-0 right-0 z-30 pr-6 flex items-center gap-3" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 50px)' }}>
             {/* Profile Menu Dropdown Container */}
             <div className="relative">
               <button
@@ -508,7 +508,7 @@ export default function SpaceSelector() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-12 mt-8 md:mt-0"
+          className="text-center mb-8 mt-0"
         >
           {currentUser && (
             <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
@@ -580,7 +580,7 @@ export default function SpaceSelector() {
         )}
 
         {/* Space bubbles */}
-        <div ref={spacesContainerRef} className="flex flex-wrap justify-center gap-8 md:gap-10 max-w-5xl mb-12">
+        <div ref={spacesContainerRef} className="flex flex-wrap justify-center gap-8 md:gap-10 max-w-5xl mb-4">
           {visibleSpaces.map((space, i) => {
             const isOwner = space.createdBy === currentUser?.id
             const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role

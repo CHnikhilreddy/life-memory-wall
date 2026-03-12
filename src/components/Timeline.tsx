@@ -165,7 +165,7 @@ export default function Timeline() {
   }
 
   const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role
-  const canInvite = (myRole === 'owner' || myRole === 'admin') && space.type === 'group'
+  const canInvite = !!myRole && space.type === 'group'
   const allActiveMembers = space.membersList.filter((m) => m.status === 'active')
 
   // Members visible for the currently selected memory
@@ -297,17 +297,24 @@ const loadPendingInvites = async () => {
     </ul>
   )
 
-  // Panel for detail mode — shows who can see this memory + invite
+  // Panel for detail mode — just shows who can see this memory as icons
   const MemoryMembersPanel = (
     <>
-      <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false); setInviteStatus(null) }} />
-      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-4 w-72 shadow-xl max-h-[80vh] overflow-y-auto">
-        <p className="font-serif text-sm text-warmDark mb-1">Who can see this</p>
-        <p className="font-sans text-sm text-warmDark/75 mb-3">
-          {selectedMemory?.visibleTo && selectedMemory.visibleTo.length > 0 ? 'Specific people only' : 'Everyone in the space'}
+      <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false) }} />
+      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-3 shadow-xl w-60">
+        <p className="font-sans text-xs text-warmDark/50 mb-2">
+          {selectedMemory?.visibleTo && selectedMemory.visibleTo.length > 0 ? 'Visible to' : 'Everyone in the space'}
         </p>
-        {renderMembersList(memoryMembers)}
-        {InviteSection}
+        <ul className="space-y-1">
+          {memoryMembers.map((m) => (
+            <li key={m.userId} className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center flex-shrink-0">
+                <span className="font-serif text-xs text-warmDark">{m.name[0]}</span>
+              </div>
+              <span className="font-sans text-sm text-warmDark/80">{m.name}</span>
+            </li>
+          ))}
+        </ul>
       </div>
     </>
   )

@@ -4,6 +4,7 @@ import { useStore } from './store/useStore'
 import LoginPage from './components/LoginPage'
 import SpaceSelector from './components/SpaceSelector'
 import Timeline from './components/Timeline'
+import { MobileLayout } from './components/MobileLayout'
 
 const INACTIVITY_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -102,19 +103,23 @@ export default function App() {
     )
   }
 
-  if (!isLoggedIn) return <LoginPage />
+  if (!isLoggedIn) return <MobileLayout><LoginPage /></MobileLayout>
 
   if (activeSpaceId) {
     return (
-      <motion.div key={`space-${activeSpaceId}`} initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
-        <Timeline />
-      </motion.div>
+      <MobileLayout>
+        <motion.div key={`space-${activeSpaceId}`} className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
+          <Timeline />
+        </motion.div>
+      </MobileLayout>
     )
   }
 
   return (
-    <motion.div key="selector" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
-      <SpaceSelector />
-    </motion.div>
+    <MobileLayout>
+      <motion.div key="selector" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
+        <SpaceSelector />
+      </motion.div>
+    </MobileLayout>
   )
 }

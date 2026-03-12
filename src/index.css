@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+.safe-top    { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
 .rich-editor:empty::before {
   content: attr(data-placeholder);
   color: rgba(74, 55, 40, 0.35);
@@ -24,15 +27,20 @@
   box-sizing: border-box;
 }
 
-html {
+html, body {
+  height: 100%;
+  overflow: hidden;
   scroll-behavior: smooth;
 }
 
 body {
   font-family: 'DM Sans', system-ui, sans-serif;
   color: #4a3728;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  height: 100%;
 }
 
 ::-webkit-scrollbar {
