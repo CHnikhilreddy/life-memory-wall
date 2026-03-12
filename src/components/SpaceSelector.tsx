@@ -22,7 +22,7 @@ const defaultSpaceColors = [
   'from-lime-200/60 to-emerald-200/60',
 ]
 
-type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'change-password'
+type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password'
 
 const spacePageHeadings = [
   'Where do you want to go today?',
@@ -117,6 +117,10 @@ export default function SpaceSelector() {
 
   // Profile Menu
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editNameError, setEditNameError] = useState('')
+  const [editNameLoading, setEditNameLoading] = useState(false)
+  const [editNameSuccess, setEditNameSuccess] = useState(false)
 
   // Icon theme (accent variation): 0 = Warm, 1 = Lavender, 2 = Rosy
   const [selectedTheme, setSelectedTheme] = useState(0)
@@ -399,6 +403,22 @@ export default function SpaceSelector() {
                                   </span>
                                 </button>
                               )}
+
+                              <button
+                                onClick={() => {
+                                  setEditName(currentUser?.name || '')
+                                  setEditNameError('')
+                                  setEditNameSuccess(false)
+                                  setModal('edit-profile')
+                                  setShowProfileMenu(false)
+                                }}
+                                className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center flex-shrink-0">
+                                  <User className="w-4 h-4 text-cyan-600/80" />
+                                </div>
+                                <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Edit name</span>
+                              </button>
 
                               <button
                                 onClick={() => {
@@ -1058,6 +1078,74 @@ export default function SpaceSelector() {
                       <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all">Cancel</button>
                       <button onClick={handleSaveSpace} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium flex items-center justify-center gap-2">
                         <Check className="w-4 h-4" /> Save
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* EDIT PROFILE (name) */}
+              {modal === 'edit-profile' && (
+                <>
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center mx-auto mb-4">
+                    <User className="w-6 h-6 text-cyan-600/80" />
+                  </div>
+                  <h2 className="font-serif text-2xl text-warmDark mb-2">Edit name</h2>
+                  <p className="font-handwriting text-lg text-warmDark/75 mb-6">How should we call you?</p>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="font-handwriting text-warmDark/70 text-base block mb-2">Your name</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => { setEditName(e.target.value); setEditNameError(''); setEditNameSuccess(false) }}
+                        onKeyDown={(e) => e.key === 'Enter' && !editNameLoading && (async () => {
+                          if (!editName.trim() || editName.trim().length < 2) { setEditNameError('Name must be at least 2 characters'); return }
+                          setEditNameLoading(true); setEditNameError('')
+                          try {
+                            const result = await api.updateProfile({ name: editName.trim() })
+                            useStore.getState().setCurrentUser(result.user)
+                            setEditNameSuccess(true)
+                          } catch (err: any) { setEditNameError(err.message || 'Failed to update name') }
+                          finally { setEditNameLoading(false) }
+                        })()}
+                        placeholder="Your name"
+                        autoFocus
+                        className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all"
+                      />
+                    </div>
+                    <p className="font-sans text-xs text-warmDark/40">Email: {currentUser?.email}</p>
+
+                    {editNameError && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                        {editNameError}
+                      </motion.p>
+                    )}
+                    {editNameSuccess && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2 flex items-center gap-2">
+                        <Check className="w-4 h-4" /> Name updated!
+                      </motion.p>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all">Cancel</button>
+                      <button
+                        onClick={async () => {
+                          if (!editName.trim() || editName.trim().length < 2) { setEditNameError('Name must be at least 2 characters'); return }
+                          setEditNameLoading(true); setEditNameError('')
+                          try {
+                            const result = await api.updateProfile({ name: editName.trim() })
+                            useStore.getState().setCurrentUser(result.user)
+                            setEditNameSuccess(true)
+                          } catch (err: any) { setEditNameError(err.message || 'Failed to update name') }
+                          finally { setEditNameLoading(false) }
+                        }}
+                        disabled={editNameLoading || editNameSuccess}
+                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {editNameLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save'}
                       </button>
                     </div>
                   </div>

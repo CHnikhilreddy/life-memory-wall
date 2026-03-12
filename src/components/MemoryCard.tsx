@@ -30,6 +30,7 @@ function getEmojiForTag(tag?: string) {
 
 export default function MemoryCard({ memory, index, side, onDelete, onReact, onEdit, onCardClick, spaceType, members, canEdit = true }: Props) {
   const [showReactions, setShowReactions] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const rotation = side === 'left' ? -1.5 : 1.5
 
   const formatDate = (dateStr: string) =>
@@ -79,7 +80,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
               <span className="text-6xl opacity-50">{getEmojiForTag(memory.tags?.[0])}</span>
             </div>
           )}
-          <div className="absolute top-3 right-3 glass rounded-full px-3 py-1">
+          <div className="absolute top-3 right-3 glass rounded-full px-3 py-1 group-hover:top-12 transition-all duration-300">
             <span className="font-handwriting text-base text-warmDark">{formatDate(memory.date)}</span>
           </div>
         </div>
@@ -131,20 +132,57 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
 
         {/* Hover actions — hidden for view-only members */}
         {canEdit && (
-          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(memory) }}
-              className="glass rounded-full p-2 hover:bg-white/80 transition-colors"
-            >
-              <Edit3 className="w-3.5 h-3.5 text-warmDark/70" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(memory.id) }}
-              className="glass rounded-full p-2 hover:bg-coral/20 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-coral" />
-            </button>
-          </div>
+          <>
+            <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(memory) }}
+                className="glass rounded-full p-2 hover:bg-white/80 transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-warmDark/70" />
+              </button>
+            </div>
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true) }}
+                className="glass rounded-full p-2 hover:bg-coral/20 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-coral" />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Delete confirmation overlay */}
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 z-30 rounded-2xl bg-warmDark/60 backdrop-blur-sm flex flex-col items-center justify-center p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-12 rounded-full bg-coral/20 flex items-center justify-center mb-3">
+              <Trash2 className="w-6 h-6 text-coral" />
+            </div>
+            <h4 className="font-serif text-lg text-white mb-1">Delete this memory?</h4>
+            <p className="font-sans text-sm text-white/70 text-center mb-5">
+              "{memory.title}" will be gone forever.
+              {memory.substories && memory.substories.length > 0 && ` All ${memory.substories.length} moments inside will be lost.`}
+            </p>
+            <div className="flex gap-3 w-full max-w-[240px]">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false) }}
+                className="flex-1 py-2.5 rounded-xl bg-white/20 text-white font-sans text-sm hover:bg-white/30 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(memory.id); setShowDeleteConfirm(false) }}
+                className="flex-1 py-2.5 rounded-xl bg-coral text-white font-sans text-sm hover:bg-coral/90 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </motion.div>
         )}
 
         {/* Reaction picker */}
