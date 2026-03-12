@@ -92,7 +92,7 @@ export default function Timeline() {
     if (!memory || memory.substories !== undefined) return
     api.getSubstories(space.id, selectedMemoryId).then((substories) => {
       useStore.getState().updateMemorySubstories(space.id, selectedMemoryId, substories)
-    }).catch(() => {})
+    }).catch((err) => console.error('Failed to load moments:', err))
   }, [selectedMemoryId])
 
   if (!space) {
