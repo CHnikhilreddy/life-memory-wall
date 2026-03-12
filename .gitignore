@@ -8,3 +8,8 @@ server/dist
 server/.env
 server/src/generated
 *.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
