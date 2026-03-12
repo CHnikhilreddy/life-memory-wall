@@ -9,15 +9,7 @@ import {
   getIconDef, getIconVariation, makeIconId, getColorClasses,
   randomTaglineForIcon, SpaceIconRenderer,
 } from './SpaceIcons'
-
-function validatePassword(p: string): string | null {
-  if (p.length < 8) return 'Password must be at least 8 characters'
-  if (!/[A-Z]/.test(p)) return 'Password must contain at least one uppercase letter'
-  if (!/[a-z]/.test(p)) return 'Password must contain at least one lowercase letter'
-  if (!/[0-9]/.test(p)) return 'Password must contain at least one number'
-  if (!/[^A-Za-z0-9]/.test(p)) return 'Password must contain at least one special character'
-  return null
-}
+import { validatePassword } from '../utils/validation'
 import { MemorySpace } from '../types'
 import ParticleBackground from './ParticleBackground'
 
@@ -119,6 +111,9 @@ export default function SpaceSelector() {
   const [leaveConfirm, setLeaveConfirm] = useState(false)
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [memberActionError, setMemberActionError] = useState('')
+
+  const pwSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (pwSuccessTimerRef.current) clearTimeout(pwSuccessTimerRef.current) }, [])
 
   // Profile Menu
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -250,7 +245,8 @@ export default function SpaceSelector() {
       await api.changePassword(oldPassword, newPassword)
       setPwSuccess(true)
       setOldPassword(''); setNewPassword(''); setConfirmPassword('')
-      setTimeout(() => { setPwSuccess(false); setModal('none') }, 1500)
+      if (pwSuccessTimerRef.current) clearTimeout(pwSuccessTimerRef.current)
+      pwSuccessTimerRef.current = setTimeout(() => { setPwSuccess(false); setModal('none') }, 1500)
     } catch (err: any) {
       setPwError(err.message || 'Failed to change password')
     } finally {

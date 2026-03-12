@@ -20,12 +20,17 @@ export default function ParticleBackground() {
       hue: number
     }> = []
 
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
     const resize = () => {
       canvas.width = window.innerWidth
       canvas.height = window.innerHeight
     }
+    const debouncedResize = () => {
+      if (resizeTimer) clearTimeout(resizeTimer)
+      resizeTimer = setTimeout(resize, 100)
+    }
     resize()
-    window.addEventListener('resize', resize)
+    window.addEventListener('resize', debouncedResize)
 
     for (let i = 0; i < 50; i++) {
       particles.push({
@@ -67,7 +72,8 @@ export default function ParticleBackground() {
 
     return () => {
       cancelAnimationFrame(animationId)
-      window.removeEventListener('resize', resize)
+      window.removeEventListener('resize', debouncedResize)
+      if (resizeTimer) clearTimeout(resizeTimer)
     }
   }, [])
 

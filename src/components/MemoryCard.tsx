@@ -13,6 +13,7 @@ interface Props {
   onCardClick: (memory: Memory) => void
   spaceType?: 'personal' | 'group'
   members?: SpaceMember[]
+  canEdit?: boolean
 }
 
 const reactionEmojis = ['\u2764\uFE0F', '\ud83e\udd7a', '\ud83d\ude02', '\ud83d\ude0d', '\ud83c\udf89', '\ud83d\udd25']
@@ -27,7 +28,7 @@ function getEmojiForTag(tag?: string) {
   return tag ? map[tag] || '\u2728' : '\u2728'
 }
 
-export default function MemoryCard({ memory, index, side, onDelete, onReact, onEdit, onCardClick, spaceType, members }: Props) {
+export default function MemoryCard({ memory, index, side, onDelete, onReact, onEdit, onCardClick, spaceType, members, canEdit = true }: Props) {
   const [showReactions, setShowReactions] = useState(false)
   const rotation = side === 'left' ? -1.5 : 1.5
 
@@ -128,21 +129,23 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
           </div>
         )}
 
-        {/* Hover actions */}
-        <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(memory) }}
-            className="glass rounded-full p-2 hover:bg-white/80 transition-colors"
-          >
-            <Edit3 className="w-3.5 h-3.5 text-warmDark/70" />
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onDelete(memory.id) }}
-            className="glass rounded-full p-2 hover:bg-coral/20 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-coral" />
-          </button>
-        </div>
+        {/* Hover actions — hidden for view-only members */}
+        {canEdit && (
+          <div className="absolute top-3 left-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(memory) }}
+              className="glass rounded-full p-2 hover:bg-white/80 transition-colors"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-warmDark/70" />
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(memory.id) }}
+              className="glass rounded-full p-2 hover:bg-coral/20 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-coral" />
+            </button>
+          </div>
+        )}
 
         {/* Reaction picker */}
         <div className="mt-3 flex items-center gap-2">

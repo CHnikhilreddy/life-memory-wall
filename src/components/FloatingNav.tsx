@@ -2,11 +2,13 @@ import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
 
 interface Props {
-  onCreateClick: () => void
+  onCreateClick?: () => void
   onHomeClick: () => void
 }
 
 export default function FloatingNav({ onCreateClick, onHomeClick }: Props) {
+  if (!onCreateClick) return null
+
   return (
     <motion.div
       initial={{ y: 100, opacity: 0 }}

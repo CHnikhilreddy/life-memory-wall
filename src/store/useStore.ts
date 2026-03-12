@@ -13,7 +13,7 @@ interface AppState {
   pendingInvites: PendingInvite[]
 
   init: () => Promise<void>
-  login: (user?: Partial<User>) => Promise<void>
+  login: (credentials?: { email?: string; phone?: string; name?: string; password?: string }) => Promise<void>
   logout: () => void
   fetchSpaces: () => Promise<void>
   fetchMyInvites: () => Promise<void>
@@ -39,6 +39,7 @@ interface AppState {
   leaveSpace: (spaceId: string) => Promise<void>
   removeMember: (spaceId: string, userId: string) => Promise<void>
   updateMemberRole: (spaceId: string, userId: string, role: SpaceMember['role']) => Promise<void>
+  updateMemberPermission: (spaceId: string, userId: string, permission: 'view' | 'edit') => Promise<void>
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -73,12 +74,12 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  login: async (user) => {
+  login: async (credentials) => {
     const result = await api.login({
-      email: user?.email,
-      phone: user?.phone,
-      name: user?.name,
-      password: (user as any)?.password,
+      email: credentials?.email,
+      phone: credentials?.phone,
+      name: credentials?.name,
+      password: credentials?.password,
     })
     setToken(result.token)
     localStorage.removeItem('activeSpaceId')
@@ -155,42 +156,30 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addMemory: async (spaceId, memory) => {
-    try {
-      const created = await api.createMemory(spaceId, memory)
-      set((state) => ({
-        activeSpaceData: state.activeSpaceData?.id === spaceId
-          ? { ...state.activeSpaceData, memories: [...state.activeSpaceData.memories, created], memoryCount: state.activeSpaceData.memoryCount + 1 }
-          : state.activeSpaceData,
-      }))
-    } catch (err) {
-      console.error('Failed to create memory:', err)
-    }
+    const created = await api.createMemory(spaceId, memory)
+    set((state) => ({
+      activeSpaceData: state.activeSpaceData?.id === spaceId
+        ? { ...state.activeSpaceData, memories: [...state.activeSpaceData.memories, created], memoryCount: state.activeSpaceData.memoryCount + 1 }
+        : state.activeSpaceData,
+    }))
   },
 
   updateMemory: async (spaceId, memoryId, updates) => {
-    try {
-      const updated = await api.updateMemory(spaceId, memoryId, updates)
-      set((state) => ({
-        activeSpaceData: state.activeSpaceData?.id === spaceId
-          ? { ...state.activeSpaceData, memories: state.activeSpaceData.memories.map((m) => m.id === memoryId ? updated : m) }
-          : state.activeSpaceData,
-      }))
-    } catch (err) {
-      console.error('Failed to update memory:', err)
-    }
+    const updated = await api.updateMemory(spaceId, memoryId, updates)
+    set((state) => ({
+      activeSpaceData: state.activeSpaceData?.id === spaceId
+        ? { ...state.activeSpaceData, memories: state.activeSpaceData.memories.map((m) => m.id === memoryId ? updated : m) }
+        : state.activeSpaceData,
+    }))
   },
 
   deleteMemory: async (spaceId, memoryId) => {
-    try {
-      await api.deleteMemory(spaceId, memoryId)
-      set((state) => ({
-        activeSpaceData: state.activeSpaceData?.id === spaceId
-          ? { ...state.activeSpaceData, memories: state.activeSpaceData.memories.filter((m) => m.id !== memoryId), memoryCount: state.activeSpaceData.memoryCount - 1 }
-          : state.activeSpaceData,
-      }))
-    } catch (err) {
-      console.error('Failed to delete memory:', err)
-    }
+    await api.deleteMemory(spaceId, memoryId)
+    set((state) => ({
+      activeSpaceData: state.activeSpaceData?.id === spaceId
+        ? { ...state.activeSpaceData, memories: state.activeSpaceData.memories.filter((m) => m.id !== memoryId), memoryCount: state.activeSpaceData.memoryCount - 1 }
+        : state.activeSpaceData,
+    }))
   },
 
   addReaction: async (spaceId, memoryId, emoji) => {
@@ -272,6 +261,10 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   deleteSpace: async (spaceId) => {
+    // Snapshot for rollback
+    const prevSpaces = get().spaces
+    const prevActiveId = get().activeSpaceId
+    const prevActiveData = get().activeSpaceData
     // Optimistic: remove from UI immediately
     localStorage.removeItem('activeSpaceId')
     set((state) => ({
@@ -279,8 +272,15 @@ export const useStore = create<AppState>((set, get) => ({
       activeSpaceId: state.activeSpaceId === spaceId ? null : state.activeSpaceId,
       activeSpaceData: state.activeSpaceData?.id === spaceId ? null : state.activeSpaceData,
     }))
-    // Fire and forget — cleanup happens in background
-    api.deleteSpace(spaceId).catch((err) => console.error('Failed to delete space:', err))
+    try {
+      await api.deleteSpace(spaceId)
+    } catch (err) {
+      // Rollback optimistic update
+      set({ spaces: prevSpaces, activeSpaceId: prevActiveId, activeSpaceData: prevActiveData })
+      if (prevActiveId === spaceId) localStorage.setItem('activeSpaceId', spaceId)
+      console.error('Failed to delete space:', err)
+      throw err
+    }
   },
 
   updateSubstory: async (spaceId, memoryId, substoryId, data) => {
@@ -341,5 +341,22 @@ export const useStore = create<AppState>((set, get) => ({
     } catch (err) {
       console.error('Failed to update role:', err)
     }
+  },
+
+  updateMemberPermission: async (spaceId, userId, permission) => {
+    await api.updateMemberPermission(spaceId, userId, permission)
+    // Update local state immediately without a full fetch
+    set((state) => {
+      const updateMembers = (members: SpaceMember[]) =>
+        members.map((m) => m.userId === userId ? { ...m, permission } : m)
+      return {
+        spaces: state.spaces.map((s) =>
+          s.id === spaceId ? { ...s, membersList: updateMembers(s.membersList) } : s
+        ),
+        activeSpaceData: state.activeSpaceData?.id === spaceId
+          ? { ...state.activeSpaceData, membersList: updateMembers(state.activeSpaceData.membersList) }
+          : state.activeSpaceData,
+      }
+    })
   },
 }))

@@ -11,6 +11,7 @@ interface Props {
   onAddSubstory: (memoryId: string, substory: SubStory) => void
   onUpdateSubstory: (memoryId: string, substory: SubStory) => void
   onDeleteSubstory: (memoryId: string, substoryId: string) => void
+  canEdit?: boolean
 }
 
 const formatDate = (dateStr: string) =>
@@ -39,7 +40,7 @@ const storyGradients = [
   'from-indigo-50/30 to-lavender/30',
 ]
 
-export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateSubstory, onDeleteSubstory }: Props) {
+export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateSubstory, onDeleteSubstory, canEdit = true }: Props) {
   const [activeTab, setActiveTab] = useState<'timeline' | 'photos'>('timeline')
   const [showAddForm, setShowAddForm] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -259,16 +260,20 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
             >
               <Camera className="w-4 h-4" />
             </button>
-            <div className="w-px h-4 bg-warmMid/20 mx-0.5" />
-            <button
-              onClick={() => { setEditMode((v) => !v); if (editMode) resetForm() }}
-              title={editMode ? 'Done editing' : 'Edit moments'}
-              className={`p-1.5 rounded-lg transition-all ${
-                editMode ? 'bg-coral/10 text-coral' : 'text-warmDark/70 hover:text-warmDark/70'
-              }`}
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
+            {canEdit && (
+              <>
+                <div className="w-px h-4 bg-warmMid/20 mx-0.5" />
+                <button
+                  onClick={() => { setEditMode((v) => !v); if (editMode) resetForm() }}
+                  title={editMode ? 'Done editing' : 'Edit moments'}
+                  className={`p-1.5 rounded-lg transition-all ${
+                    editMode ? 'bg-coral/10 text-coral' : 'text-warmDark/70 hover:text-warmDark/70'
+                  }`}
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
           </motion.div>
@@ -326,8 +331,8 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                               transition={{ delay: (dateIdx * 0.1) + (idx * 0.06) }}
                               className="relative"
                             >
-                              {/* Edit / Delete actions — only visible in edit mode */}
-                              {editMode && (
+                              {/* Edit / Delete actions — only visible in edit mode for edit-permission members */}
+                              {canEdit && editMode && (
                                 <div className="absolute -top-1 right-0 flex gap-1 z-10">
                                   <button
                                     onClick={() => startEditSubstory(sub)}
@@ -551,9 +556,9 @@ export default function MemoryDetail({ memory, onClose, onAddSubstory, onUpdateS
                 </div>
               )}
 
-              {/* Add moment — only for new substories, hidden while inline editing */}
+              {/* Add moment — only for edit-permission members, hidden while inline editing */}
               <div className="mt-8">
-                {!showAddForm && !editingSubstoryId ? (
+                {canEdit && !showAddForm && !editingSubstoryId ? (
                   <motion.button
                     whileHover={{ scale: 1.01 }}
                     whileTap={{ scale: 0.99 }}

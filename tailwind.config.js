@@ -20,6 +20,12 @@ export default {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
         sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
         handwriting: ['"Caveat"', 'cursive'],
+        // font demo categories
+        poetic: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        warm: ['"Dancing Script"', 'cursive'],
+        editorial: ['"Lora"', 'Georgia', 'serif'],
+        elegant: ['"Sacramento"', 'cursive'],
+        literary: ['"EB Garamond"', 'Georgia', 'serif'],
       },
       borderRadius: {
         'blob': '60% 40% 30% 70% / 60% 30% 70% 40%',

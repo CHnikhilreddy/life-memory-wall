@@ -43,6 +43,7 @@ export interface SpaceMember {
   name: string
   role: 'owner' | 'admin' | 'member'
   status: 'active' | 'pending'
+  permission?: 'view' | 'edit'
   joinedAt: string
 }
 
@@ -70,7 +71,6 @@ export interface User {
   avatar: string
   email: string
   phone?: string
-  password?: string
 }
 
 export interface PendingInvite {

@@ -1,7 +1,7 @@
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Users, Send, Check, Mail, Loader2, X, UserMinus, LogOut } from 'lucide-react'
 import { SpaceIconRenderer } from './SpaceIcons'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
 import { Memory, SubStory, SpacePendingInvite } from '../types'
@@ -11,7 +11,7 @@ import CreateMemoryModal from './CreateMemoryModal'
 import FloatingNav from './FloatingNav'
 
 export default function Timeline() {
-  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser, removeMember, leaveSpace } =
+  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser, removeMember, leaveSpace, updateMemberPermission } =
     useStore()
   const [showCreate, setShowCreate] = useState(false)
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null)
@@ -62,14 +62,19 @@ export default function Timeline() {
   const [leaveConfirm, setLeaveConfirm] = useState(false)
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [memberActionError, setMemberActionError] = useState('')
+  const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null)
+  const inviteStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => () => { if (inviteStatusTimerRef.current) clearTimeout(inviteStatusTimerRef.current) }, [])
 
 
   const { scrollYProgress } = useScroll()
   const pathLength = useTransform(scrollYProgress, [0, 1], [0, 1])
 
   const visibleMemories = space ? getVisibleMemories(space) : []
-  const sortedMemories = [...visibleMemories].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  const sortedMemories = useMemo(
+    () => [...visibleMemories].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [space?.id, visibleMemories.length, JSON.stringify(visibleMemories.map(m => m.id + m.date))]
   )
 
   // If restored selectedMemoryId no longer exists in this space, clear it
@@ -164,7 +169,10 @@ export default function Timeline() {
     }
   }
 
-  const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role
+  const myMember = space.membersList.find((m) => m.userId === currentUser?.id)
+  const myRole = myMember?.role
+  const myPermission = myMember?.role === 'owner' ? 'edit' : (myMember?.permission ?? 'edit')
+  const canEdit = myPermission === 'edit'
   const canInvite = !!myRole && space.type === 'group'
   const allActiveMembers = space.membersList.filter((m) => m.status === 'active')
 
@@ -187,7 +195,8 @@ export default function Timeline() {
       setInviteStatus({ ok: false, msg: err.message || 'Failed to send invite' })
     } finally {
       setInviting(false)
-      setTimeout(() => setInviteStatus(null), 4000)
+      if (inviteStatusTimerRef.current) clearTimeout(inviteStatusTimerRef.current)
+      inviteStatusTimerRef.current = setTimeout(() => setInviteStatus(null), 4000)
     }
   }
 
@@ -266,6 +275,18 @@ const loadPendingInvites = async () => {
     }
   }
 
+  const handleTogglePermission = async (userId: string, current: 'view' | 'edit') => {
+    setUpdatingPermissionId(userId)
+    setMemberActionError('')
+    try {
+      await updateMemberPermission(space.id, userId, current === 'edit' ? 'view' : 'edit')
+    } catch (err: any) {
+      setMemberActionError(err.message || 'Failed to update permission')
+    } finally {
+      setUpdatingPermissionId(null)
+    }
+  }
+
   const renderMembersList = (members: typeof allActiveMembers, showActions = false) => (
     <ul className="space-y-1.5">
       {members.map((m) => (
@@ -276,9 +297,23 @@ const loadPendingInvites = async () => {
           <span className="font-sans text-sm text-warmDark/80 flex-1 min-w-0 truncate">
             {m.name}{m.userId === currentUser?.id && <span className="text-warmDark/75 ml-1 text-sm">(you)</span>}
           </span>
-          {m.role === 'owner' && <span className="text-sm text-gold flex-shrink-0">owner</span>}
-          {m.role === 'admin' && <span className="text-sm text-teal flex-shrink-0">admin</span>}
-          {showActions && canInvite && m.userId !== currentUser?.id && m.role !== 'owner' && (
+          {m.role === 'owner' && <span className="text-xs text-gold flex-shrink-0">owner</span>}
+          {/* Permission toggle — only owner sees it, only for non-owner members */}
+          {showActions && myRole === 'owner' && m.userId !== currentUser?.id && m.role !== 'owner' && (
+            <button
+              onClick={() => handleTogglePermission(m.userId, m.permission ?? 'edit')}
+              disabled={updatingPermissionId === m.userId}
+              className={`flex-shrink-0 text-[11px] font-sans px-2 py-0.5 rounded-full border transition-all ${
+                (m.permission ?? 'edit') === 'edit'
+                  ? 'bg-teal/10 border-teal/30 text-teal'
+                  : 'bg-warmMid/10 border-warmMid/30 text-warmDark/50'
+              } disabled:opacity-40`}
+              title={`Click to switch to ${(m.permission ?? 'edit') === 'edit' ? 'view' : 'edit'}`}
+            >
+              {updatingPermissionId === m.userId ? '…' : (m.permission ?? 'edit') === 'edit' ? 'edit' : 'view'}
+            </button>
+          )}
+          {showActions && myRole === 'owner' && m.userId !== currentUser?.id && m.role !== 'owner' && (
             removingMemberId === m.userId ? (
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button onClick={() => handleRemoveMember(m.userId)} className="text-sm text-coral font-medium">Remove</button>
@@ -652,6 +687,7 @@ const loadPendingInvites = async () => {
                         onCardClick={handleCardClick}
                         spaceType={space.type}
                         members={space.membersList}
+                        canEdit={canEdit}
                       />
                     </div>
                   </div>
@@ -691,6 +727,7 @@ const loadPendingInvites = async () => {
                   onAddSubstory={handleAddSubstory}
                   onUpdateSubstory={handleUpdateSubstory}
                   onDeleteSubstory={handleDeleteSubstory}
+                  canEdit={canEdit}
                 />
               </motion.div>
             )}
@@ -714,6 +751,7 @@ const loadPendingInvites = async () => {
                     onAddSubstory={handleAddSubstory}
                     onUpdateSubstory={handleUpdateSubstory}
                     onDeleteSubstory={handleDeleteSubstory}
+                    canEdit={canEdit}
                   />
                 </div>
               </motion.div>
@@ -722,10 +760,10 @@ const loadPendingInvites = async () => {
         </div>
       </div>
 
-      {/* Floating nav — hidden in detail view */}
+      {/* Floating nav — hidden in detail view; create button hidden for view-only members */}
       {!isDetailOpen && (
         <FloatingNav
-          onCreateClick={() => { setEditingMemory(null); setShowCreate(true) }}
+          onCreateClick={canEdit ? () => { setEditingMemory(null); setShowCreate(true) } : undefined}
           onHomeClick={() => setActiveSpace(null)}
         />
       )}

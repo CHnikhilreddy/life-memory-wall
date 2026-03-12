@@ -1,25 +1,195 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState } from 'react'
-import { ArrowLeft, Mail, Eye, EyeOff, UserPlus } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ArrowLeft, Mail, Eye, EyeOff, UserPlus, Camera, Heart, Lock, Users, Image, MessageCircle } from 'lucide-react'
 import { useStore } from '../store/useStore'
 import { api, setToken } from '../api'
 import ParticleBackground from './ParticleBackground'
+import { validatePassword } from '../utils/validation'
 
 const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim())
-
-function validatePassword(p: string): string | null {
-  if (p.length < 8) return 'Password must be at least 8 characters'
-  if (!/[A-Z]/.test(p)) return 'Password must contain at least one uppercase letter'
-  if (!/[a-z]/.test(p)) return 'Password must contain at least one lowercase letter'
-  if (!/[0-9]/.test(p)) return 'Password must contain at least one number'
-  if (!/[^A-Za-z0-9]/.test(p)) return 'Password must contain at least one special character'
-  return null
-}
 
 type Screen = 'main' | 'email' | 'signup' | 'verify' | 'forgot'
 type EmailStep = 'enter' | 'password'
 type ForgotStep = 'email' | 'code' | 'newpass'
 type SignupStep = 'email' | 'verify' | 'profile'
+
+/* ─── Animated showcase: cycles through app scenes ─── */
+const showcaseScenes = [
+  {
+    icon: Camera,
+    label: 'Capture',
+    cards: [
+      { bg: 'from-peach/40 to-coral/20', title: 'Beach sunset', date: 'Mar 8, 2026', icon: Image },
+      { bg: 'from-lavender/40 to-peach/20', title: 'Birthday party', date: 'Feb 14, 2026', icon: Heart },
+      { bg: 'from-teal/20 to-lavender/30', title: 'Weekend hike', date: 'Jan 28, 2026', icon: Image },
+    ],
+    caption: 'Every moment, safely kept',
+  },
+  {
+    icon: Users,
+    label: 'Share',
+    avatars: ['A', 'S', 'R', 'M'],
+    caption: 'Only with your closest people',
+  },
+  {
+    icon: Heart,
+    label: 'Relive',
+    memory: { title: 'One year ago today', subtitle: 'That road trip to the coast', date: 'Mar 12, 2025' },
+    caption: 'Memories resurface beautifully',
+  },
+  {
+    icon: Lock,
+    label: 'Private',
+    caption: 'No followers. No algorithms. Just your circle.',
+  },
+]
+
+function LoginShowcase() {
+  const [activeScene, setActiveScene] = useState(0)
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveScene((prev) => (prev + 1) % showcaseScenes.length)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const scene = showcaseScenes[activeScene]
+
+  return (
+    <motion.div
+      className="mb-10"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.45, duration: 0.7 }}
+    >
+      {/* Phone-like showcase frame */}
+      <div className="relative mx-auto w-64 h-44 rounded-2xl bg-white/30 backdrop-blur-sm border border-white/50 overflow-hidden shadow-lg">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeScene}
+            className="absolute inset-0 flex flex-col items-center justify-center px-4"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Scene: Timeline cards */}
+            {scene.cards && (
+              <div className="w-full space-y-1.5">
+                {scene.cards.map((card, i) => (
+                  <motion.div
+                    key={card.title}
+                    className={`flex items-center gap-2 bg-gradient-to-r ${card.bg} rounded-lg px-3 py-1.5`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.15, duration: 0.4 }}
+                  >
+                    <div className="w-7 h-7 rounded-md bg-white/50 flex items-center justify-center">
+                      <card.icon className="w-3.5 h-3.5 text-warmDark/50" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-sans text-[11px] font-medium text-warmDark/70 truncate">{card.title}</p>
+                      <p className="font-sans text-[9px] text-warmDark/40">{card.date}</p>
+                    </div>
+                    <Heart className="w-3 h-3 text-coral/50" />
+                  </motion.div>
+                ))}
+              </div>
+            )}
+
+            {/* Scene: Circle of avatars */}
+            {scene.avatars && (
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex -space-x-2">
+                  {scene.avatars.map((initial, i) => (
+                    <motion.div
+                      key={initial}
+                      className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/60 to-coral/40 border-2 border-white flex items-center justify-center"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: i * 0.12, duration: 0.3, type: 'spring' }}
+                    >
+                      <span className="font-sans text-xs font-semibold text-white">{initial}</span>
+                    </motion.div>
+                  ))}
+                </div>
+                <motion.div
+                  className="flex items-center gap-1.5"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-warmDark/40" />
+                  <p className="font-sans text-[10px] text-warmDark/40">4 people in this circle</p>
+                </motion.div>
+              </div>
+            )}
+
+            {/* Scene: Memory resurface */}
+            {scene.memory && (
+              <motion.div
+                className="w-full bg-gradient-to-br from-lavender/30 to-peach/30 rounded-xl px-4 py-3 text-center"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, type: 'spring' }}
+              >
+                <Heart className="w-5 h-5 text-coral/60 mx-auto mb-1.5" />
+                <p className="font-handwriting text-base text-warmDark/60">{scene.memory.title}</p>
+                <p className="font-sans text-[11px] text-warmDark/45 mt-0.5">{scene.memory.subtitle}</p>
+                <p className="font-sans text-[9px] text-warmDark/30 mt-1">{scene.memory.date}</p>
+              </motion.div>
+            )}
+
+            {/* Scene: Private & secure */}
+            {!scene.cards && !scene.avatars && !scene.memory && (
+              <motion.div
+                className="flex flex-col items-center gap-2"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5, type: 'spring' }}
+              >
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal/30 to-lavender/30 flex items-center justify-center">
+                  <Lock className="w-6 h-6 text-warmDark/40" />
+                </div>
+                <p className="font-sans text-[11px] text-warmDark/50 text-center leading-snug px-2">
+                  No followers. No algorithms.<br />Just your circle.
+                </p>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Caption + scene indicator */}
+      <div className="mt-3 text-center">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={scene.caption}
+            className="font-handwriting text-base text-warmDark/50"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.3 }}
+          >
+            {scene.caption}
+          </motion.p>
+        </AnimatePresence>
+        <div className="flex justify-center gap-1.5 mt-2">
+          {showcaseScenes.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveScene(i)}
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                i === activeScene ? 'bg-gold/70 w-4' : 'bg-warmDark/15'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  )
+}
 
 export default function LoginPage() {
   const login = useStore((s) => s.login)
@@ -304,8 +474,11 @@ export default function LoginPage() {
             >
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, delay: 0.2 }}>
                 <h1 className="font-serif text-5xl md:text-6xl font-bold text-warmDark mb-3 text-shadow-warm">My Inner Circle</h1>
-                <p className="font-handwriting text-2xl text-warmDark/70 mb-14">Your stories, beautifully preserved</p>
+                <p className="font-handwriting text-2xl text-warmDark/70 mb-6">Your stories, beautifully preserved</p>
               </motion.div>
+
+              {/* ── MOTION SHOWCASE ── */}
+              <LoginShowcase />
 
               <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
                 <button

@@ -1,4 +1,13 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+import { Capacitor } from '@capacitor/core'
+
+function getBaseUrl() {
+  if (Capacitor.isNativePlatform()) {
+    return import.meta.env.VITE_API_URL_NATIVE || 'https://your-production-api.com/api'
+  }
+  return import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+}
+
+const BASE_URL = getBaseUrl()
 
 function getToken(): string | null {
   return localStorage.getItem('token')
@@ -80,6 +89,9 @@ export const api = {
 
   updateMemberRole: (spaceId: string, userId: string, role: string) =>
     request<any>(`/spaces/${spaceId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+
+  updateMemberPermission: (spaceId: string, userId: string, permission: 'view' | 'edit') =>
+    request<any>(`/spaces/${spaceId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ permission }) }),
 
   // Memories
   createMemory: (spaceId: string, data: any) =>
