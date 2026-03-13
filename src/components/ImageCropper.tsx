@@ -2,7 +2,8 @@ import { useState, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
 import type { Area } from 'react-easy-crop'
 import { motion } from 'framer-motion'
-import { Check, RotateCw, ZoomIn, ZoomOut, ChevronLeft } from 'lucide-react'
+import { Check, RotateCw, ZoomIn, ZoomOut, ChevronLeft, Loader2 } from 'lucide-react'
+import { uploadImage } from '../cloudinary'
 
 interface Props {
   imageSrc: string
@@ -19,15 +20,20 @@ const ASPECT_OPTIONS: { label: string; value: number | undefined }[] = [
   { label: '9:16', value: 9 / 16 },
 ]
 
-/** Create a cropped image from canvas and return a blob URL */
-async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
+/** Create a cropped image file from canvas */
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<File> {
+  // Fetch image as blob first to avoid CORS canvas tainting
+  const resp = await fetch(imageSrc)
+  const imgBlob = await resp.blob()
+  const blobUrl = URL.createObjectURL(imgBlob)
+
   const image = new Image()
-  image.crossOrigin = 'anonymous'
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve()
     image.onerror = reject
-    image.src = imageSrc
+    image.src = blobUrl
   })
+  URL.revokeObjectURL(blobUrl)
 
   const canvas = document.createElement('canvas')
   canvas.width = pixelCrop.width
@@ -46,10 +52,10 @@ async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string>
     pixelCrop.height,
   )
 
-  return new Promise((resolve) => {
+  return new Promise<File>((resolve) => {
     canvas.toBlob((blob) => {
       if (blob) {
-        resolve(URL.createObjectURL(blob))
+        resolve(new File([blob], `cropped-${Date.now()}.jpg`, { type: 'image/jpeg' }))
       }
     }, 'image/jpeg', 0.92)
   })
@@ -73,8 +79,9 @@ export default function ImageCropper({ imageSrc, onCropDone, onCancel }: Props) 
     if (!croppedAreaPixels) return
     setProcessing(true)
     try {
-      const croppedUrl = await getCroppedImg(imageSrc, croppedAreaPixels)
-      onCropDone(croppedUrl)
+      const croppedFile = await getCroppedImg(imageSrc, croppedAreaPixels)
+      const uploadedUrl = await uploadImage(croppedFile)
+      onCropDone(uploadedUrl)
     } catch {
       onCancel()
     } finally {
@@ -177,7 +184,8 @@ export default function ImageCropper({ imageSrc, onCropDone, onCancel }: Props) 
             className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold to-coral text-white text-sm font-sans font-medium transition-all disabled:opacity-50"
           >
             <Check className="w-4 h-4" />
-            <span>{processing ? 'Applying...' : 'Done'}</span>
+            {processing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            <span>{processing ? 'Saving...' : 'Done'}</span>
           </button>
         </div>
       </div>
