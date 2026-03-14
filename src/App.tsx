@@ -1,10 +1,26 @@
 import { motion } from 'framer-motion'
-import { useEffect, useRef } from 'react'
+import React, { Suspense, lazy, useEffect, useRef } from 'react'
 import { useStore } from './store/useStore'
 import LoginPage from './components/LoginPage'
-import SpaceSelector from './components/SpaceSelector'
-import Timeline from './components/Timeline'
 import { MobileLayout } from './components/MobileLayout'
+
+const SpaceSelector = lazy(() => import('./components/SpaceSelector'))
+const Timeline = lazy(() => import('./components/Timeline'))
+
+const LoadingFallback = () => (
+  <div className="min-h-screen gradient-bg flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gold/80 to-coral/70 flex items-center justify-center shadow-lg mx-auto mb-4">
+        <svg width="32" height="32" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="14" stroke="white" strokeWidth="2.5" opacity="0.9" />
+          <circle cx="20" cy="20" r="8" stroke="white" strokeWidth="2" opacity="0.7" />
+          <circle cx="20" cy="20" r="3" fill="white" opacity="0.9" />
+        </svg>
+      </div>
+      <p className="font-handwriting text-xl text-warmDark/70">Loading...</p>
+    </div>
+  </div>
+)
 
 const INACTIVITY_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -108,18 +124,22 @@ export default function App() {
   if (activeSpaceId) {
     return (
       <MobileLayout>
-        <motion.div key={`space-${activeSpaceId}`} className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
-          <Timeline />
-        </motion.div>
+        <Suspense fallback={<LoadingFallback />}>
+          <motion.div key={`space-${activeSpaceId}`} className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
+            <Timeline />
+          </motion.div>
+        </Suspense>
       </MobileLayout>
     )
   }
 
   return (
     <MobileLayout>
-      <motion.div key="selector" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
-        <SpaceSelector />
-      </motion.div>
+      <Suspense fallback={<LoadingFallback />}>
+        <motion.div key="selector" className="h-full" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { duration: 0.4 } }}>
+          <SpaceSelector />
+        </motion.div>
+      </Suspense>
     </MobileLayout>
   )
 }

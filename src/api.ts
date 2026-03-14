@@ -21,25 +21,75 @@ export function clearToken() {
   localStorage.removeItem('token')
 }
 
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken()
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  })
+  const method = (options.method || 'GET').toUpperCase()
+  const maxAttempts = method === 'GET' ? 3 : 1
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    const err = new Error(body.error || `Request failed: ${res.status}`) as any
-    Object.assign(err, body)
-    throw err
+  let lastError: any
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+    try {
+      const res = await fetch(`${BASE_URL}${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...options.headers,
+        },
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        const err = new Error(body.error || `Request failed: ${res.status}`) as any
+        err.status = res.status
+        Object.assign(err, body)
+
+        // Retry on 5xx for GET requests
+        if (res.status >= 500 && attempt < maxAttempts) {
+          lastError = err
+          await delay(Math.min(1000 * Math.pow(2, attempt - 1), 5000))
+          continue
+        }
+
+        throw err
+      }
+
+      return res.json()
+    } catch (err: any) {
+      clearTimeout(timeoutId)
+
+      // Don't retry client errors (4xx) or non-GET
+      if (err.status && err.status < 500) throw err
+
+      lastError = err
+      if (attempt < maxAttempts) {
+        await delay(Math.min(1000 * Math.pow(2, attempt - 1), 5000))
+        continue
+      }
+
+      // Wrap abort errors
+      if (err.name === 'AbortError') {
+        const timeoutErr = new Error('Request timed out') as any
+        timeoutErr.status = 0
+        throw timeoutErr
+      }
+
+      throw err
+    }
   }
 
-  return res.json()
+  throw lastError
 }
 
 // Auth
@@ -65,6 +115,9 @@ export const api = {
 
   getSpace: (id: string) =>
     request<any>(`/spaces/${id}`),
+
+  getSpacePaginated: (id: string, cursor?: string, limit = 20) =>
+    request<any>(`/spaces/${id}${cursor ? `?cursor=${cursor}&limit=${limit}` : `?limit=${limit}`}`),
 
   createSpace: (data: { title: string; coverEmoji?: string; coverIcon?: string; coverColor?: string; coverImage?: string; type: string; description?: string }) =>
     request<any>('/spaces', { method: 'POST', body: JSON.stringify(data) }),
@@ -164,4 +217,7 @@ export const api = {
 
   cancelPendingInvite: (spaceId: string, inviteId: string) =>
     request<{ success: boolean }>(`/spaces/${spaceId}/pending-invites/${inviteId}`, { method: 'DELETE' }),
+
+  regenerateInviteCode: (spaceId: string) =>
+    request<{ inviteCode: string }>(`/spaces/${spaceId}/regenerate-code`, { method: 'POST' }),
 }

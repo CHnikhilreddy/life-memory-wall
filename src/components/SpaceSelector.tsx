@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus, ArrowLeft, User, ImagePlus } from 'lucide-react'
+import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus, ArrowLeft, User, ImagePlus, Copy } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
@@ -22,7 +22,7 @@ const defaultSpaceColors = [
   'from-lime-200/60 to-emerald-200/60',
 ]
 
-type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password'
+type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password' | 'join'
 
 const spacePageHeadings = [
   'Where do you want to go today?',
@@ -58,10 +58,7 @@ export default function SpaceSelector() {
   const [newCoverImage, setNewCoverImage] = useState('')
   const [coverImageUploading, setCoverImageUploading] = useState(false)
   const [createdSpaceId, setCreatedSpaceId] = useState<string | null>(null)
-  const [inviteInput, setInviteInput] = useState('')
-  const [invitedEmails, setInvitedEmails] = useState<string[]>([])
-  const [inviteStatus, setInviteStatus] = useState<{ email: string; ok: boolean; msg: string } | null>(null)
-  const [inviting, setInviting] = useState(false)
+  const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null)
   const [viewingSpaceId, setViewingSpaceId] = useState<string | null>(null)
 
   // Edit-mode for spaces page
@@ -112,6 +109,14 @@ export default function SpaceSelector() {
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [memberActionError, setMemberActionError] = useState('')
 
+  // Join group
+  const [joinCode, setJoinCode] = useState('')
+  const [joinLoading, setJoinLoading] = useState(false)
+  const [joinError, setJoinError] = useState('')
+  const [joinSuccess, setJoinSuccess] = useState('')
+  const [codeCopied, setCodeCopied] = useState(false)
+  const [membersTab, setMembersTab] = useState<'members' | 'requests'>('members')
+
   const pwSuccessTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => () => { if (pwSuccessTimerRef.current) clearTimeout(pwSuccessTimerRef.current) }, [])
 
@@ -157,22 +162,20 @@ export default function SpaceSelector() {
       memories: [],
     }
     try {
-      const newSpaceId = await addSpace(space)
+      const created = await addSpace(space)
       setNewTitle('')
       setNewIcon('couple')
       setNewIconVariation(0)
       setNewColor('purple-pink')
       setNewCoverImage('')
       setNewDescription(randomTaglineForIcon('couple'))
-      if (newType === 'group' && newSpaceId) {
-        setCreatedSpaceId(newSpaceId)
-        setInvitedEmails([])
-        setInviteInput('')
-        setInviteStatus(null)
+      if (newType === 'group' && created?.id) {
+        setCreatedSpaceId(created.id)
+        setCreatedInviteCode(created.inviteCode || null)
         setCreateStep('invite')
       } else {
         setModal('none')
-        if (newSpaceId) setActiveSpace(newSpaceId)
+        if (created?.id) setActiveSpace(created.id)
       }
     } finally {
       setCreating(false)
@@ -209,30 +212,32 @@ export default function SpaceSelector() {
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
-  const sendInvite = async () => {
-    if (!inviteInput.trim() || !createdSpaceId) return
-    const email = inviteInput.trim()
-    if (!email.includes('@')) {
-      setInviteStatus({ email, ok: false, msg: 'Please enter a valid email address' })
-      return
-    }
-    setInviting(true)
-    setInviteStatus(null)
-    try {
-      await api.inviteByEmail(createdSpaceId, email)
-      setInvitedEmails((prev) => [...prev, email])
-      setInviteInput('')
-      setInviteStatus({ email, ok: true, msg: `Invite sent to ${email}` })
-    } catch {
-      setInviteStatus({ email, ok: false, msg: `Couldn't send invite to ${email}` })
-    } finally {
-      setInviting(false)
-    }
-  }
-
   const handleDeleteSpace = async (spaceId: string) => {
     await deleteSpace(spaceId)
     setDeleteConfirmId(null); setModal('none'); setEditingSpaceId(null)
+  }
+
+  const handleJoinByCode = async () => {
+    if (!joinCode.trim()) { setJoinError('Please enter an invite code'); return }
+    setJoinLoading(true)
+    setJoinError('')
+    setJoinSuccess('')
+    try {
+      const result = await api.joinByCode(joinCode.trim())
+      setJoinSuccess(`Request sent to join "${result.spaceName}"! The owner will review your request.`)
+      setJoinCode('')
+    } catch (err: any) {
+      setJoinError(err.message || 'Failed to join. Please check the code and try again.')
+    } finally {
+      setJoinLoading(false)
+    }
+  }
+
+  const copyInviteCode = (code: string) => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCodeCopied(true)
+      setTimeout(() => setCodeCopied(false), 2000)
+    })
   }
 
   const viewingSpace = spaces.find((s) => s.id === viewingSpaceId)
@@ -271,9 +276,11 @@ export default function SpaceSelector() {
     setNewCoverImage('')
     setEditCoverImage('')
     setCreatedSpaceId(null)
-    setInviteInput('')
-    setInvitedEmails([])
-    setInviteStatus(null)
+    setCreatedInviteCode(null)
+    setJoinCode('')
+    setJoinError('')
+    setJoinSuccess('')
+    setCodeCopied(false)
     setCreateError('')
     setEditError('')
   }
@@ -385,6 +392,19 @@ export default function SpaceSelector() {
                                   </span>
                                 </button>
                               )}
+
+                              <button
+                                onClick={() => {
+                                  setModal('join')
+                                  setShowProfileMenu(false)
+                                }}
+                                className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                              >
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal/20 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                                  <Users className="w-4 h-4 text-teal/80" />
+                                </div>
+                                <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Join a group</span>
+                              </button>
 
                               {visibleSpaces.length > 0 && (
                                 <button
@@ -688,7 +708,7 @@ export default function SpaceSelector() {
                   })()}
                   {space.type === 'group' && (
                     <button
-                      onClick={() => { if (!editPageMode) { setViewingSpaceId(space.id); setModal('members') } }}
+                      onClick={() => { if (!editPageMode) { setViewingSpaceId(space.id); setMembersTab('members'); setModal('members') } }}
                       className="flex items-center gap-1 mx-auto mt-1 text-sm text-warmDark/75 hover:text-warmDark/80 transition-colors"
                     >
                       <Users className="w-3 h-3" />
@@ -733,7 +753,7 @@ export default function SpaceSelector() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-              className={`glass rounded-3xl p-8 w-full relative z-10 max-h-[85vh] overflow-y-auto ${modal === 'members' ? 'max-w-sm' : 'max-w-lg'}`}
+              className={`glass rounded-3xl p-8 w-full relative z-10 max-h-[85vh] overflow-y-auto ${modal === 'members' || modal === 'join' ? 'max-w-sm' : 'max-w-lg'}`}
               onClick={(e) => e.stopPropagation()}
             >
               <button onClick={closeModal} className="absolute top-4 right-4 text-warmDark/75 hover:text-warmDark/70 transition-colors">
@@ -899,59 +919,41 @@ export default function SpaceSelector() {
                 </>
               )}
 
-              {/* CREATE — Step 3: Invite friends (group only) */}
+              {/* CREATE — Step 3: Share invite code (group only) */}
               {modal === 'create' && createStep === 'invite' && (
                 <>
                   <div className="flex flex-col items-center mb-6">
                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold/30 to-coral/30 flex items-center justify-center mb-3">
-                      <Users className="w-7 h-7 text-gold/80" />
+                      <Check className="w-7 h-7 text-gold/80" />
                     </div>
-                    <h2 className="font-serif text-2xl text-warmDark">Invite friends</h2>
-                    <p className="font-sans text-sm text-warmDark/55 mt-1 text-center">Share this space with people you love</p>
+                    <h2 className="font-serif text-2xl text-warmDark">Group space created!</h2>
+                    <p className="font-sans text-sm text-warmDark/55 mt-1 text-center">Share this invite code with your friends</p>
                   </div>
 
-                  {/* Email input */}
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="email"
-                      value={inviteInput}
-                      onChange={(e) => { setInviteInput(e.target.value); setInviteStatus(null) }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); sendInvite() } }}
-                      placeholder="friend@email.com"
-                      className="flex-1 bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all text-sm"
-                    />
-                    <button
-                      onClick={sendInvite}
-                      disabled={inviting || !inviteInput.trim()}
-                      className="px-4 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-50 flex items-center gap-1.5 transition-all hover:shadow-md"
-                    >
-                      {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                      <span className="text-sm">Send</span>
-                    </button>
-                  </div>
-
-                  {/* Status message */}
-                  <AnimatePresence>
-                    {inviteStatus && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className={`text-sm font-sans mb-3 ${inviteStatus.ok ? 'text-emerald-600/80' : 'text-red-500/80'}`}
-                      >
-                        {inviteStatus.msg}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Invited emails list */}
-                  {invitedEmails.length > 0 && (
-                    <div className="mb-4 space-y-1.5">
-                      {invitedEmails.map((email) => (
-                        <div key={email} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-50/60 border border-emerald-200/40">
-                          <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                          <span className="text-sm font-sans text-warmDark/70 truncate">{email}</span>
-                        </div>
-                      ))}
+                  {/* Invite code display */}
+                  {createdInviteCode ? (
+                    <div className="flex flex-col items-center gap-4 mb-6">
+                      <div className="bg-white/60 border border-warmMid/20 rounded-2xl px-6 py-4 flex items-center gap-3">
+                        <span className="font-mono text-2xl tracking-[0.3em] text-warmDark font-bold select-all">{createdInviteCode}</span>
+                        <button
+                          onClick={() => copyInviteCode(createdInviteCode)}
+                          className="p-2 rounded-xl hover:bg-warmMid/10 transition-colors text-warmDark/50 hover:text-warmDark"
+                          title="Copy code"
+                        >
+                          {codeCopied ? <Check className="w-5 h-5 text-teal" /> : <Copy className="w-5 h-5" />}
+                        </button>
+                      </div>
+                      {codeCopied && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="text-sm text-teal font-sans">
+                          Copied to clipboard!
+                        </motion.p>
+                      )}
+                      <p className="font-sans text-sm text-warmDark/50 text-center leading-relaxed">
+                        Friends can use this code to request to join.<br />You'll be able to approve or decline requests.
+                      </p>
                     </div>
+                  ) : (
+                    <p className="text-center text-warmDark/50 font-sans text-sm mb-6">Loading invite code...</p>
                   )}
 
                   <div className="flex gap-3 pt-2">
@@ -959,7 +961,7 @@ export default function SpaceSelector() {
                       onClick={() => { setModal('none'); setCreateStep('type'); if (createdSpaceId) setActiveSpace(createdSpaceId) }}
                       className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium transition-all hover:shadow-md"
                     >
-                      {invitedEmails.length > 0 ? 'Open Space' : 'Skip for now'}
+                      Open Space
                     </button>
                   </div>
                 </>
@@ -1265,7 +1267,7 @@ export default function SpaceSelector() {
 
                 return (
                   <>
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <h2 className="font-serif text-2xl text-warmDark flex items-center gap-2">
                         {viewingSpace.coverIcon ? <SpaceIconRenderer iconId={viewingSpace.coverIcon} size="sm" /> : <span>{viewingSpace.coverEmoji}</span>} {viewingSpace.title}
                       </h2>
@@ -1274,51 +1276,149 @@ export default function SpaceSelector() {
                       </p>
                     </div>
 
-                    <div className="space-y-1">
-                      {activeMembers.map((member) => (
-                        <div key={member.userId} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-white/20 transition-colors group">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center flex-shrink-0">
-                              <span className="font-serif text-sm text-warmDark">{member.name[0]}</span>
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-sans text-sm text-warmDark truncate">
-                                {member.name}
-                                {member.userId === currentUser?.id && <span className="text-warmDark/75 ml-1">(you)</span>}
-                              </p>
-                              <p className="text-sm text-warmDark/75">Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                            {member.role === 'owner' && <span className="flex items-center gap-1 text-sm text-gold bg-gold/10 px-2 py-1 rounded-full"><Crown className="w-3 h-3" /> Owner</span>}
-                            {member.role === 'admin' && <span className="flex items-center gap-1 text-sm text-teal bg-teal/10 px-2 py-1 rounded-full"><Shield className="w-3 h-3" /> Admin</span>}
-                            {member.role === 'member' && !canManage && <span className="text-sm text-warmDark/70">Member</span>}
-                            {/* Remove button — shown to owner/admin for other non-owner members */}
-                            {canManage && member.userId !== currentUser?.id && member.role !== 'owner' && (
-                              removingMemberId === member.userId ? (
-                                <div className="flex items-center gap-1.5">
-                                  <button onClick={() => handleRemove(member.userId)}
-                                    className="text-sm text-coral font-medium hover:text-coral/70 transition-colors">Remove</button>
-                                  <button onClick={() => setRemovingMemberId(null)}
-                                    className="text-sm text-warmDark/75 hover:text-warmDark/70 transition-colors">Cancel</button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => setRemovingMemberId(member.userId)}
-                                  className="w-7 h-7 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-warmDark/70 hover:text-coral/70 hover:bg-coral/10 transition-all"
-                                  title="Remove member"
-                                >
-                                  <UserMinus className="w-3.5 h-3.5" />
-                                </button>
-                              )
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    {/* Tabs */}
+                    {canManage && viewingSpace.type === 'group' && (
+                      <div className="flex gap-1 mb-4 bg-warmMid/8 rounded-xl p-1">
+                        <button
+                          onClick={() => setMembersTab('members')}
+                          className={`flex-1 py-2 rounded-lg text-sm font-sans transition-all ${membersTab === 'members' ? 'bg-white shadow-sm text-warmDark font-medium' : 'text-warmDark/60 hover:text-warmDark/80'}`}
+                        >
+                          Members
+                        </button>
+                        <button
+                          onClick={() => setMembersTab('requests')}
+                          className={`flex-1 py-2 rounded-lg text-sm font-sans transition-all flex items-center justify-center gap-1.5 ${membersTab === 'requests' ? 'bg-white shadow-sm text-warmDark font-medium' : 'text-warmDark/60 hover:text-warmDark/80'}`}
+                        >
+                          Requests
+                          {viewingSpace.joinRequests && viewingSpace.joinRequests.length > 0 && (
+                            <span className="w-5 h-5 rounded-full bg-amber-400 text-white text-xs flex items-center justify-center font-medium">
+                              {viewingSpace.joinRequests.length}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
-                    {memberActionError && (
-                      <p className="text-sm text-coral font-sans mt-3 px-1">{memberActionError}</p>
+                    {/* Members tab content */}
+                    {membersTab === 'members' && (
+                      <>
+                        <div className="space-y-1">
+                          {activeMembers.map((member) => (
+                            <div key={member.userId} className="flex items-center justify-between py-2.5 px-3 rounded-xl hover:bg-white/20 transition-colors group">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center flex-shrink-0">
+                                  <span className="font-serif text-sm text-warmDark">{member.name[0]}</span>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-sans text-sm text-warmDark truncate">
+                                    {member.name}
+                                    {member.userId === currentUser?.id && <span className="text-warmDark/75 ml-1">(you)</span>}
+                                  </p>
+                                  <p className="text-sm text-warmDark/75">Joined {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                                {member.role === 'owner' && <span className="flex items-center gap-1 text-sm text-gold bg-gold/10 px-2 py-1 rounded-full"><Crown className="w-3 h-3" /> Owner</span>}
+                                {member.role === 'admin' && <span className="flex items-center gap-1 text-sm text-teal bg-teal/10 px-2 py-1 rounded-full"><Shield className="w-3 h-3" /> Admin</span>}
+                                {member.role === 'member' && !canManage && <span className="text-sm text-warmDark/70">Member</span>}
+                                {canManage && member.userId !== currentUser?.id && member.role !== 'owner' && (
+                                  removingMemberId === member.userId ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <button onClick={() => handleRemove(member.userId)}
+                                        className="text-sm text-coral font-medium hover:text-coral/70 transition-colors">Remove</button>
+                                      <button onClick={() => setRemovingMemberId(null)}
+                                        className="text-sm text-warmDark/75 hover:text-warmDark/70 transition-colors">Cancel</button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      onClick={() => setRemovingMemberId(member.userId)}
+                                      className="w-7 h-7 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-warmDark/70 hover:text-coral/70 hover:bg-coral/10 transition-all"
+                                      title="Remove member"
+                                    >
+                                      <UserMinus className="w-3.5 h-3.5" />
+                                    </button>
+                                  )
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {memberActionError && (
+                          <p className="text-sm text-coral font-sans mt-3 px-1">{memberActionError}</p>
+                        )}
+
+                        {/* Invite Code — visible to all members */}
+                        {viewingSpace.inviteCode && (
+                          <div className="mt-5 pt-4 border-t border-warmMid/10">
+                            <p className="font-sans text-xs text-warmDark/50 mb-2">Invite code</p>
+                            <div className="flex items-center gap-2 bg-white/40 rounded-xl px-4 py-2.5">
+                              <span className="font-mono text-base tracking-[0.2em] text-warmDark font-semibold flex-1 select-all">{viewingSpace.inviteCode}</span>
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(viewingSpace.inviteCode || '')
+                                  setCodeCopied(true)
+                                  setTimeout(() => setCodeCopied(false), 2000)
+                                }}
+                                className="p-1.5 rounded-lg hover:bg-warmMid/10 transition-colors text-warmDark/50 hover:text-warmDark"
+                                title="Copy code"
+                              >
+                                {codeCopied ? <Check className="w-4 h-4 text-teal" /> : <Copy className="w-4 h-4" />}
+                              </button>
+                            </div>
+                            <p className="font-sans text-[11px] text-warmDark/40 mt-1.5">Share this code so others can request to join</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {/* Requests tab content */}
+                    {membersTab === 'requests' && (
+                      <div className="min-h-[120px]">
+                        {viewingSpace.joinRequests && viewingSpace.joinRequests.length > 0 ? (
+                          <div className="space-y-2">
+                            {viewingSpace.joinRequests.map((req) => (
+                              <div key={req.userId} className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-amber-50/50 border border-amber-200/30">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-200/60 to-orange-200/60 flex items-center justify-center text-sm font-serif text-warmDark flex-shrink-0">
+                                  {req.userName[0]}
+                                </div>
+                                <span className="font-sans text-sm text-warmDark/80 flex-1 truncate">{req.userName}</span>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await api.approveJoin(viewingSpace.id, req.userId)
+                                        await useStore.getState().fetchSpaces()
+                                      } catch {}
+                                    }}
+                                    className="w-7 h-7 rounded-full bg-teal/15 hover:bg-teal/30 flex items-center justify-center transition-colors"
+                                    title="Approve"
+                                  >
+                                    <Check className="w-3.5 h-3.5 text-teal" />
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await api.rejectJoin(viewingSpace.id, req.userId)
+                                        await useStore.getState().fetchSpaces()
+                                      } catch {}
+                                    }}
+                                    className="w-7 h-7 rounded-full bg-coral/15 hover:bg-coral/30 flex items-center justify-center transition-colors"
+                                    title="Reject"
+                                  >
+                                    <X className="w-3.5 h-3.5 text-coral" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-8 text-warmDark/40">
+                            <Users className="w-8 h-8 mb-2 opacity-40" />
+                            <p className="font-sans text-sm">No pending requests</p>
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {/* Leave group — for non-owners */}
@@ -1351,6 +1451,56 @@ export default function SpaceSelector() {
                   </>
                 )
               })()}
+
+              {/* JOIN GROUP */}
+              {modal === 'join' && (
+                <>
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-teal/20 to-emerald-100 flex items-center justify-center mb-3">
+                      <Users className="w-7 h-7 text-teal/80" />
+                    </div>
+                    <h2 className="font-serif text-2xl text-warmDark">Join a group</h2>
+                    <p className="font-sans text-sm text-warmDark/55 mt-1 text-center">Enter the invite code shared by the group owner</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <input
+                      type="text"
+                      value={joinCode}
+                      onChange={(e) => { setJoinCode(e.target.value.toUpperCase()); setJoinError(''); setJoinSuccess('') }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleJoinByCode()}
+                      placeholder="Enter 8-character code"
+                      maxLength={8}
+                      autoFocus
+                      className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-mono text-center text-xl tracking-[0.2em] outline-none focus:ring-2 focus:ring-gold/30 transition-all uppercase placeholder:text-warmDark/30 placeholder:tracking-normal placeholder:font-sans placeholder:text-base"
+                    />
+
+                    {joinError && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center">
+                        {joinError}
+                      </motion.p>
+                    )}
+                    {joinSuccess && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2.5 text-center leading-relaxed">
+                        {joinSuccess}
+                      </motion.p>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all">Cancel</button>
+                      <button
+                        onClick={handleJoinByCode}
+                        disabled={joinLoading || !!joinSuccess}
+                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        {joinLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : 'Request to join'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
