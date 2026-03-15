@@ -317,23 +317,33 @@ export default function CreateMemoryModal({ isOpen, onClose, onSave, editMemory,
                     className="hidden"
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []).slice(0, 1)
-                      if (files.length > 0) handleFiles(files)
+                      if (files.length > 0) { setPhotos([]); handleFiles(files) }
                     }}
                   />
                   {photos.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      {photos.slice(0, 1).map((url, i) => (
-                        <div key={i} className="relative group aspect-square rounded-xl overflow-hidden">
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
-                            className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="w-3.5 h-3.5 text-white" />
-                          </button>
-                        </div>
-                      ))}
+                    <div className="mb-3">
+                      <div className="grid grid-cols-3 gap-2 mb-2">
+                        {photos.slice(0, 1).map((url, i) => (
+                          <div key={i} className="relative group aspect-square rounded-xl overflow-hidden">
+                            <img src={url} alt="" className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => setPhotos((prev) => prev.filter((_, idx) => idx !== i))}
+                              className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3.5 h-3.5 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-1.5 text-sm text-warmDark/60 hover:text-warmDark/90 transition-colors"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        Change photo
+                      </button>
                     </div>
                   ) : uploading ? (
                     <div className="flex items-center justify-center gap-2 text-warmDark/75 py-4">
