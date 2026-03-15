@@ -705,7 +705,7 @@ export default function SpaceSelector() {
                       )}
                       {/* Hide select mode: dim overlay + check */}
                       {hideSelectMode && (
-                        <div className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${isChecked ? 'bg-warmDark/50' : 'bg-warmDark/10'}`}>
+                        <div className={`absolute inset-0 z-20 flex items-center justify-center transition-all duration-200 ${isChecked ? 'bg-warmDark/50' : 'bg-warmDark/10'}`}>
                           <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${isChecked ? 'bg-white border-white' : 'border-white/70'}`}>
                             {isChecked && <Check className="w-5 h-5 text-warmDark" />}
                           </div>
