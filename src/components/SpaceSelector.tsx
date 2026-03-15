@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus, ArrowLeft, User, ImagePlus, Copy } from 'lucide-react'
+import { Plus, Users, Crown, Shield, X, Pencil, Trash2, Check, Loader2, Mail, Eye, EyeOff, KeyRound, LogOut, UserMinus, ArrowLeft, User, ImagePlus, Copy, Lock, Unlock } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
@@ -22,7 +22,7 @@ const defaultSpaceColors = [
   'from-lime-200/60 to-emerald-200/60',
 ]
 
-type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password' | 'join'
+type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password' | 'join' | 'unlock-vault' | 'set-secret-code' | 'profile' | 'manage-spaces'
 
 const spacePageHeadings = [
   'Where do you want to go today?',
@@ -43,7 +43,7 @@ const spacePageSubheadings = [
 
 export default function SpaceSelector() {
   const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, leaveSpace, removeMember, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite } = useStore()
-  const visibleSpaces = getVisibleSpaces()
+  const allSpaces = getVisibleSpaces()
   const [pageHeading] = useState(() => spacePageHeadings[Math.floor(Math.random() * spacePageHeadings.length)])
   const [pageSubheading] = useState(() => spacePageSubheadings[Math.floor(Math.random() * spacePageSubheadings.length)])
 
@@ -126,15 +126,55 @@ export default function SpaceSelector() {
   const [editNameError, setEditNameError] = useState('')
   const [editNameLoading, setEditNameLoading] = useState(false)
   const [editNameSuccess, setEditNameSuccess] = useState(false)
+  const [profileTab, setProfileTab] = useState<'name' | 'password' | 'code'>('name')
 
   // Icon theme (accent variation): 0 = Warm, 1 = Lavender, 2 = Rosy
   const [selectedTheme, setSelectedTheme] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState<string>(iconCategories[0])
+
+  // Hidden Spaces / Secret Vault
+  const [hideSelectMode, setHideSelectMode] = useState(false)
+  const [selectedToHide, setSelectedToHide] = useState<Set<string>>(new Set())
+  const [hiddenSpaceIds, setHiddenSpaceIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('hiddenSpaceIds')
+      return stored ? new Set(JSON.parse(stored)) : new Set()
+    } catch { return new Set() }
+  })
+  const [secretCode, setSecretCode] = useState<string>(() => localStorage.getItem('spacesSecretCode') || '')
+  const [vaultOpen, setVaultOpen] = useState(false)
+  const [vaultPinInput, setVaultPinInput] = useState('')
+  const [vaultPinError, setVaultPinError] = useState('')
+  const [newSecretCode, setNewSecretCode] = useState('')
+  const [confirmSecretCode, setConfirmSecretCode] = useState('')
+  const [currentSecretCodeInput, setCurrentSecretCodeInput] = useState('')
+  const [secretCodeError, setSecretCodeError] = useState('')
+  const [secretCodeSuccess, setSecretCodeSuccess] = useState(false)
+  const [pendingHideAfterCode, setPendingHideAfterCode] = useState(false)
   const categoryShortNames: Record<string, string> = {
     'Pets': 'Pets', 'Kids': 'Kids', 'College & School': 'College',
     'Friends & Gang': 'Friends', 'Family & Couples': 'Family',
     'Siblings & Cousins': 'Siblings', 'Personal': 'Personal',
     'Trips & Vacations': 'Trips', 'Celebrations & More': 'Celebrations',
+  }
+
+  // Spaces shown in the grid (respects vault state)
+  const visibleSpaces = hideSelectMode || vaultOpen
+    ? allSpaces
+    : allSpaces.filter((s) => !hiddenSpaceIds.has(s.id))
+
+  const handleDoneHiding = () => {
+    if (selectedToHide.size > 0 && !secretCode) {
+      setPendingHideAfterCode(true)
+      setModal('set-secret-code')
+      return
+    }
+    const newHidden = new Set(selectedToHide)
+    localStorage.setItem('hiddenSpaceIds', JSON.stringify(Array.from(newHidden)))
+    setHiddenSpaceIds(newHidden)
+    setSelectedToHide(new Set())
+    setHideSelectMode(false)
+    setVaultOpen(false)
   }
 
   const handleCreate = async () => {
@@ -283,6 +323,15 @@ export default function SpaceSelector() {
     setCodeCopied(false)
     setCreateError('')
     setEditError('')
+    // Vault / hide state reset
+    setVaultPinInput('')
+    setVaultPinError('')
+    setNewSecretCode('')
+    setConfirmSecretCode('')
+    setCurrentSecretCodeInput('')
+    setSecretCodeError('')
+    setSecretCodeSuccess(false)
+    if (!pendingHideAfterCode) setPendingHideAfterCode(false)
   }
 
   if (loading) {
@@ -406,21 +455,18 @@ export default function SpaceSelector() {
                                 <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Join a group</span>
                               </button>
 
-                              {visibleSpaces.length > 0 && (
+                              {allSpaces.length > 0 && (
                                 <button
                                   onClick={() => {
-                                    setEditPageMode((v) => !v)
-                                    setDeleteConfirmId(null)
+                                    setModal('manage-spaces')
                                     setShowProfileMenu(false)
                                   }}
                                   className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
                                 >
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${editPageMode ? 'bg-gradient-to-br from-coral/20 to-red-100' : 'bg-gradient-to-br from-gold/20 to-amber-100'}`}>
-                                    <Pencil className={`w-4 h-4 ${editPageMode ? 'text-coral/80' : 'text-gold/80'}`} />
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center flex-shrink-0">
+                                    <Pencil className="w-4 h-4 text-gold/80" />
                                   </div>
-                                  <span className={`font-sans text-sm ${editPageMode ? 'text-coral/80 font-medium' : 'text-warmDark/75 group-hover:text-warmDark'}`}>
-                                    {editPageMode ? 'Done Editing' : 'Edit Spaces'}
-                                  </span>
+                                  <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Manage spaces</span>
                                 </button>
                               )}
 
@@ -429,7 +475,10 @@ export default function SpaceSelector() {
                                   setEditName(currentUser?.name || '')
                                   setEditNameError('')
                                   setEditNameSuccess(false)
-                                  setModal('edit-profile')
+                                  setOldPassword(''); setNewPassword(''); setConfirmPassword(''); setPwError(''); setPwSuccess(false)
+                                  setNewSecretCode(''); setConfirmSecretCode(''); setCurrentSecretCodeInput(''); setSecretCodeError(''); setSecretCodeSuccess(false)
+                                  setProfileTab('name')
+                                  setModal('profile')
                                   setShowProfileMenu(false)
                                 }}
                                 className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
@@ -437,20 +486,7 @@ export default function SpaceSelector() {
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center flex-shrink-0">
                                   <User className="w-4 h-4 text-cyan-600/80" />
                                 </div>
-                                <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Edit name</span>
-                              </button>
-
-                              <button
-                                onClick={() => {
-                                  setModal('change-password')
-                                  setShowProfileMenu(false)
-                                }}
-                                className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
-                              >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-indigo-100 flex items-center justify-center flex-shrink-0">
-                                  <KeyRound className="w-4 h-4 text-purple-500/80" />
-                                </div>
-                                <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Change password</span>
+                                <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Profile</span>
                               </button>
                             </div>
 
@@ -563,15 +599,15 @@ export default function SpaceSelector() {
           )}
 
           <h1 className="font-serif text-3xl md:text-5xl text-warmDark mb-4">
-            {visibleSpaces.length === 0 ? 'Your story starts here' : pageHeading}
+            {allSpaces.length === 0 ? 'Your story starts here' : pageHeading}
           </h1>
           <p className="font-handwriting text-xl md:text-2xl text-warmDark/70">
-            {visibleSpaces.length === 0 ? 'Create a space to begin' : pageSubheading}
+            {allSpaces.length === 0 ? 'Create a space to begin' : pageSubheading}
           </p>
         </motion.div>
 
         {/* Empty state */}
-        {visibleSpaces.length === 0 && (
+        {allSpaces.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -629,7 +665,8 @@ export default function SpaceSelector() {
           {visibleSpaces.map((space, i) => {
             const isOwner = space.createdBy === currentUser?.id
             const myRole = space.membersList.find((m) => m.userId === currentUser?.id)?.role
-            const isDelConfirm = false // handled by modal now
+            const isHidden = hiddenSpaceIds.has(space.id)
+            const isChecked = selectedToHide.has(space.id)
             return (
               <motion.div
                 key={space.id}
@@ -640,15 +677,27 @@ export default function SpaceSelector() {
               >
                 <div className="relative">
                   <motion.button
-                    whileHover={editPageMode ? {} : { scale: 1.08, y: -8 }}
+                    whileHover={editPageMode || hideSelectMode ? {} : { scale: 1.08, y: -8 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => editPageMode ? undefined : setActiveSpace(space.id)}
-                    className={`group flex flex-col items-center relative ${editPageMode ? 'cursor-default' : ''}`}
+                    onClick={() => {
+                      if (hideSelectMode) {
+                        setSelectedToHide((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(space.id)) next.delete(space.id)
+                          else next.add(space.id)
+                          return next
+                        })
+                      } else if (!editPageMode) {
+                        setActiveSpace(space.id)
+                      }
+                    }}
+                    className={`group flex flex-col items-center relative ${editPageMode || hideSelectMode ? 'cursor-pointer' : ''}`}
                     animate={editPageMode ? { rotate: [0, -2, 2, -1, 1, 0] } : { rotate: 0 }}
                     transition={editPageMode ? { repeat: Infinity, duration: 0.6, repeatDelay: 0.1 } : {}}
                   >
-                    <div className={`w-28 h-28 md:w-36 md:h-36 rounded-full shadow-lg transition-shadow duration-500
-                      border border-white/50 relative overflow-hidden ${!editPageMode ? 'group-hover:shadow-2xl' : ''}
+                    <div className={`w-28 h-28 md:w-36 md:h-36 rounded-full shadow-lg transition-all duration-300
+                      border border-white/50 relative overflow-hidden ${!editPageMode && !hideSelectMode ? 'group-hover:shadow-2xl' : ''}
+                      ${isHidden && vaultOpen ? 'opacity-70' : ''}
                       ${space.coverImage ? '' : `bg-gradient-to-br ${space.coverColor ? getColorClasses(space.coverColor) : defaultSpaceColors[i % defaultSpaceColors.length]} flex items-center justify-center`}`}>
                       {space.coverImage ? (
                         <img src={space.coverImage} alt={space.title} className="w-full h-full object-cover" />
@@ -662,8 +711,27 @@ export default function SpaceSelector() {
                           )}
                         </>
                       )}
+                      {/* Hide select mode: dim overlay + check */}
+                      {hideSelectMode && (
+                        <div className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${isChecked ? 'bg-warmDark/50' : 'bg-warmDark/10'}`}>
+                          <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${isChecked ? 'bg-white border-white' : 'border-white/70'}`}>
+                            {isChecked && <Check className="w-5 h-5 text-warmDark" />}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </motion.button>
+
+                  {/* Lock badge — shown when vault is open and space is hidden */}
+                  {!hideSelectMode && vaultOpen && isHidden && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-br from-gold/80 to-coral/70 shadow-md flex items-center justify-center ring-2 ring-white/80 z-10"
+                    >
+                      <Lock className="w-3.5 h-3.5 text-white" />
+                    </motion.div>
+                  )}
 
                   {/* Edit mode overlays */}
                   {editPageMode && isOwner && (
@@ -691,7 +759,7 @@ export default function SpaceSelector() {
                 </div>
 
                 <div className="mt-3 text-center">
-                  <h3 className="font-serif text-base md:text-lg text-warmDark font-medium">{space.title}</h3>
+                  <h3 className={`font-serif text-base md:text-lg font-medium ${isHidden && vaultOpen ? 'text-warmDark/50' : 'text-warmDark'}`}>{space.title}</h3>
                   {(() => {
                     const visibleCount = space.memories?.length
                       ? space.memories.filter((m) => {
@@ -701,12 +769,12 @@ export default function SpaceSelector() {
                         }).length
                       : space.memoryCount
                     return (
-                      <p className="font-handwriting text-warmDark/70 text-base">
+                      <p className={`font-handwriting text-base ${isHidden && vaultOpen ? 'text-warmDark/40' : 'text-warmDark/70'}`}>
                         {visibleCount} {visibleCount === 1 ? 'memory' : 'memories'}
                       </p>
                     )
                   })()}
-                  {space.type === 'group' && (
+                  {!hideSelectMode && space.type === 'group' && (
                     <button
                       onClick={() => { if (!editPageMode) { setViewingSpaceId(space.id); setMembersTab('members'); setModal('members') } }}
                       className="flex items-center gap-1 mx-auto mt-1 text-sm text-warmDark/75 hover:text-warmDark/80 transition-colors"
@@ -716,7 +784,7 @@ export default function SpaceSelector() {
                       {isOwner && <Crown className="w-3 h-3 text-gold/60" />}
                     </button>
                   )}
-                  {space.type === 'group' && myRole && myRole !== 'owner' && (
+                  {!hideSelectMode && space.type === 'group' && myRole && myRole !== 'owner' && (
                     <p className="text-sm text-warmDark/70 mt-0.5">{myRole === 'admin' ? 'Admin' : 'Member'}</p>
                   )}
                 </div>
@@ -724,10 +792,46 @@ export default function SpaceSelector() {
             )
           })}
 
+
         </div>
 
+        {/* Hide-select mode: floating Done / Cancel bar */}
+        <AnimatePresence>
+          {hideSelectMode && (
+            <motion.div
+              initial={{ opacity: 0, y: 60 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 60 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 22 }}
+              className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-full bg-white/90 backdrop-blur-xl shadow-2xl border border-white/60"
+            >
+              <button
+                onClick={() => {
+                  setHideSelectMode(false)
+                  setSelectedToHide(new Set())
+                }}
+                className="px-4 py-2 rounded-full text-warmDark/70 hover:text-warmDark font-sans text-sm transition-colors"
+              >
+                Cancel
+              </button>
+              <div className="w-px h-5 bg-warmDark/15" />
+              <span className="font-sans text-sm text-warmDark/60 px-1">
+                {selectedToHide.size} selected
+              </span>
+              <div className="w-px h-5 bg-warmDark/15" />
+              <button
+                onClick={handleDoneHiding}
+                className="px-5 py-2 rounded-full bg-gradient-to-r from-slate-700 to-slate-800 text-white font-sans text-sm font-medium hover:shadow-lg transition-all flex items-center gap-2"
+              >
+                <Check className="w-4 h-4" />
+                Done
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Floating "New Space" button — bottom right corner (only when spaces exist) */}
-        {visibleSpaces.length > 0 && <motion.button
+        {allSpaces.length > 0 && !hideSelectMode && <motion.button
           initial={{ opacity: 0, scale: 0.5 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.5, type: 'spring', stiffness: 200 }}
@@ -753,6 +857,7 @@ export default function SpaceSelector() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+              data-modal="main"
               className={`glass rounded-3xl p-8 w-full relative z-10 max-h-[85vh] overflow-y-auto ${modal === 'members' || modal === 'join' ? 'max-w-sm' : 'max-w-lg'}`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -1095,6 +1200,345 @@ export default function SpaceSelector() {
                       </button>
                     </div>
                   </div>
+                </>
+              )}
+
+              {/* MANAGE SPACES */}
+              {modal === 'manage-spaces' && (
+                <>
+                  <h2 className="font-serif text-2xl text-warmDark mb-2">Manage spaces</h2>
+                  <p className="font-handwriting text-lg text-warmDark/60 mb-6">What would you like to do?</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      onClick={() => {
+                        setEditPageMode(true)
+                        setDeleteConfirmId(null)
+                        closeModal()
+                      }}
+                      className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-amber-50/80 to-orange-50/80 border border-amber-200/40 hover:border-amber-300/60 hover:shadow-lg hover:scale-[1.02] transition-all"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-gold/30 to-amber-200/70 flex items-center justify-center shadow-sm">
+                        <Pencil className="w-7 h-7 text-amber-600/80" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-serif text-base text-warmDark font-medium">Edit spaces</p>
+                        <p className="font-sans text-xs text-warmDark/55 mt-1 leading-snug">Rename, restyle or delete</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedToHide(new Set(hiddenSpaceIds))
+                        setHideSelectMode(true)
+                        closeModal()
+                      }}
+                      className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-slate-50/80 to-gray-100/80 border border-slate-200/40 hover:border-slate-300/60 hover:shadow-lg hover:scale-[1.02] transition-all"
+                    >
+                      <div className="w-14 h-14 rounded-full bg-gradient-to-br from-slate-200/70 to-gray-300/70 flex items-center justify-center shadow-sm">
+                        <EyeOff className="w-7 h-7 text-slate-500/80" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-serif text-base text-warmDark font-medium">Hide spaces</p>
+                        <p className="font-sans text-xs text-warmDark/55 mt-1 leading-snug">Move to secret vault</p>
+                      </div>
+                    </button>
+                  </div>
+                  <button onClick={closeModal} className="w-full mt-4 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                </>
+              )}
+
+              {/* PROFILE (tabbed: name / password / secrecy code) */}
+              {modal === 'profile' && (
+                <>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-gold/40 to-coral/40 flex items-center justify-center flex-shrink-0 ring-2 ring-white/60">
+                      <span className="font-serif text-base text-white font-semibold">{currentUser?.name?.[0]?.toUpperCase() || 'U'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-serif text-lg text-warmDark font-medium truncate">{currentUser?.name || 'User'}</p>
+                      <p className="font-sans text-xs text-warmDark/50 truncate">{currentUser?.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex gap-1 mb-5 bg-warmMid/8 rounded-xl p-1">
+                    {([
+                      { key: 'name', label: 'Name' },
+                      { key: 'password', label: 'Password' },
+                      { key: 'code', label: 'Secret code' },
+                    ] as const).map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => {
+                          setProfileTab(tab.key)
+                          setEditNameError(''); setEditNameSuccess(false)
+                          setPwError(''); setPwSuccess(false)
+                          setSecretCodeError(''); setSecretCodeSuccess(false)
+                        }}
+                        className={`flex-1 py-2 rounded-lg text-xs font-sans transition-all ${profileTab === tab.key ? 'bg-white shadow-sm text-warmDark font-medium' : 'text-warmDark/60 hover:text-warmDark/80'}`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Tab: Edit name */}
+                  {profileTab === 'name' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2">Your name</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => { setEditName(e.target.value); setEditNameError(''); setEditNameSuccess(false) }}
+                          onKeyDown={(e) => e.key === 'Enter' && !editNameLoading && (async () => {
+                            if (!editName.trim() || editName.trim().length < 2) { setEditNameError('Name must be at least 2 characters'); return }
+                            setEditNameLoading(true); setEditNameError('')
+                            try {
+                              const result = await api.updateProfile({ name: editName.trim() })
+                              useStore.getState().setCurrentUser(result.user)
+                              setEditNameSuccess(true)
+                            } catch (err: any) { setEditNameError(err.message || 'Failed to update name') }
+                            finally { setEditNameLoading(false) }
+                          })()}
+                          placeholder="Your name"
+                          autoFocus
+                          className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all"
+                        />
+                      </div>
+                      {editNameError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                          {editNameError}
+                        </motion.p>
+                      )}
+                      {editNameSuccess && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2 flex items-center gap-2">
+                          <Check className="w-4 h-4" /> Name updated!
+                        </motion.p>
+                      )}
+                      <div className="flex gap-3 pt-1">
+                        <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                        <button
+                          onClick={async () => {
+                            if (!editName.trim() || editName.trim().length < 2) { setEditNameError('Name must be at least 2 characters'); return }
+                            setEditNameLoading(true); setEditNameError('')
+                            try {
+                              const result = await api.updateProfile({ name: editName.trim() })
+                              useStore.getState().setCurrentUser(result.user)
+                              setEditNameSuccess(true)
+                            } catch (err: any) { setEditNameError(err.message || 'Failed to update name') }
+                            finally { setEditNameLoading(false) }
+                          }}
+                          disabled={editNameLoading || editNameSuccess}
+                          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm"
+                        >
+                          {editNameLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tab: Change password */}
+                  {profileTab === 'password' && (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2">Current password</label>
+                        <div className="relative">
+                          <input type={showOld ? 'text' : 'password'} value={oldPassword}
+                            onChange={(e) => { setOldPassword(e.target.value); setPwError('') }}
+                            placeholder="Enter current password" autoFocus
+                            className="w-full bg-white/50 rounded-xl px-4 py-3 pr-11 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
+                          <button type="button" onClick={() => setShowOld((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-warmDark/70 hover:text-warmDark/70 transition-colors">
+                            {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2">New password</label>
+                        <div className="relative">
+                          <input type={showNew ? 'text' : 'password'} value={newPassword}
+                            onChange={(e) => { setNewPassword(e.target.value); setPwError('') }}
+                            placeholder="8+ chars, A-Z, 0-9, symbol"
+                            className="w-full bg-white/50 rounded-xl px-4 py-3 pr-11 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
+                          <button type="button" onClick={() => setShowNew((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-warmDark/70 hover:text-warmDark/70 transition-colors">
+                            {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2">Confirm new password</label>
+                        <input type="password" value={confirmPassword}
+                          onChange={(e) => { setConfirmPassword(e.target.value); setPwError('') }}
+                          onKeyDown={(e) => e.key === 'Enter' && handleChangePassword()}
+                          placeholder="Repeat new password"
+                          className="w-full bg-white/50 rounded-xl px-4 py-3 text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all" />
+                      </div>
+                      {pwError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2">
+                          {pwError}
+                        </motion.p>
+                      )}
+                      {pwSuccess && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2 flex items-center gap-2">
+                          <Check className="w-4 h-4" /> Password changed!
+                        </motion.p>
+                      )}
+                      <div className="flex gap-3 pt-1">
+                        <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                        <button onClick={handleChangePassword} disabled={pwLoading || pwSuccess}
+                          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm">
+                          {pwLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : 'Update'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Secret Vault entry — only shown when a code is set or hidden spaces exist */}
+                  {(secretCode || hiddenSpaceIds.size > 0) && profileTab !== 'code' && (
+                    <div className="mt-5 pt-4 border-t border-warmMid/10">
+                      <button
+                        onClick={() => {
+                          if (vaultOpen) {
+                            setVaultOpen(false)
+                            closeModal()
+                          } else if (secretCode) {
+                            setVaultPinInput('')
+                            setVaultPinError('')
+                            setModal('unlock-vault')
+                          } else {
+                            setProfileTab('code')
+                          }
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/30 transition-all group"
+                      >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${vaultOpen ? 'bg-gradient-to-br from-gold/20 to-amber-100' : 'bg-gradient-to-br from-warmMid/10 to-warmMid/20'}`}>
+                          {vaultOpen
+                            ? <Unlock className="w-4 h-4 text-gold/80" />
+                            : <Lock className="w-4 h-4 text-warmDark/50" />
+                          }
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">
+                            {vaultOpen ? 'Lock vault' : 'Open secret vault'}
+                          </p>
+                          {hiddenSpaceIds.size > 0 && (
+                            <p className="font-sans text-xs text-warmDark/40">
+                              {hiddenSpaceIds.size} hidden {hiddenSpaceIds.size === 1 ? 'space' : 'spaces'}
+                            </p>
+                          )}
+                        </div>
+                        {vaultOpen && <span className="w-2 h-2 rounded-full bg-gold/70 flex-shrink-0" />}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Tab: Secrecy code */}
+                  {profileTab === 'code' && (
+                    <div className="space-y-4">
+                      <p className="font-handwriting text-warmDark/60 text-center text-lg">
+                        {secretCode ? 'Change the code that protects your hidden spaces' : 'Set a 4-digit code to lock your secret vault'}
+                      </p>
+                      {secretCode && (
+                        <div>
+                          <label className="font-handwriting text-warmDark/70 text-base block mb-2 text-center">Current code</label>
+                          <div className="flex gap-3 justify-center">
+                            {[0, 1, 2, 3].map((idx) => (
+                              <input key={idx} id={`pc-cur-${idx}`} type="password" inputMode="numeric" maxLength={1}
+                                value={currentSecretCodeInput[idx] || ''} autoFocus={idx === 0}
+                                onChange={(e) => {
+                                  const val = e.target.value.replace(/\D/, ''); if (!val) return
+                                  const arr = (currentSecretCodeInput + '    ').split('').slice(0, 4); arr[idx] = val
+                                  setCurrentSecretCodeInput(arr.join('').trimEnd()); setSecretCodeError('')
+                                  if (idx < 3) document.getElementById(`pc-cur-${idx + 1}`)?.focus()
+                                }}
+                                onKeyDown={(e) => { if (e.key === 'Backspace') { e.preventDefault(); const arr = (currentSecretCodeInput + '    ').split('').slice(0, 4); if (arr[idx]?.trim()) { arr[idx] = ' '; setCurrentSecretCodeInput(arr.join('').trimEnd()) } else if (idx > 0) { arr[idx - 1] = ' '; setCurrentSecretCodeInput(arr.join('').trimEnd()); document.getElementById(`pc-cur-${idx - 1}`)?.focus() } } }}
+                                className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2 text-center">{secretCode ? 'New code' : 'Your code'}</label>
+                        <div className="flex gap-3 justify-center">
+                          {[0, 1, 2, 3].map((idx) => (
+                            <input key={idx} id={`pc-new-${idx}`} type="password" inputMode="numeric" maxLength={1}
+                              value={newSecretCode[idx] || ''} autoFocus={!secretCode && idx === 0}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/, ''); if (!val) return
+                                const arr = (newSecretCode + '    ').split('').slice(0, 4); arr[idx] = val
+                                setNewSecretCode(arr.join('').trimEnd()); setSecretCodeError('')
+                                if (idx < 3) document.getElementById(`pc-new-${idx + 1}`)?.focus()
+                                else document.getElementById('pc-conf-0')?.focus()
+                              }}
+                              onKeyDown={(e) => { if (e.key === 'Backspace') { e.preventDefault(); const arr = (newSecretCode + '    ').split('').slice(0, 4); if (arr[idx]?.trim()) { arr[idx] = ' '; setNewSecretCode(arr.join('').trimEnd()) } else if (idx > 0) { arr[idx - 1] = ' '; setNewSecretCode(arr.join('').trimEnd()); document.getElementById(`pc-new-${idx - 1}`)?.focus() } } }}
+                              className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2 text-center">Confirm code</label>
+                        <div className="flex gap-3 justify-center">
+                          {[0, 1, 2, 3].map((idx) => (
+                            <input key={idx} id={`pc-conf-${idx}`} type="password" inputMode="numeric" maxLength={1}
+                              value={confirmSecretCode[idx] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/, ''); if (!val) return
+                                const arr = (confirmSecretCode + '    ').split('').slice(0, 4); arr[idx] = val
+                                setConfirmSecretCode(arr.join('').trimEnd()); setSecretCodeError('')
+                                if (idx < 3) document.getElementById(`pc-conf-${idx + 1}`)?.focus()
+                              }}
+                              onKeyDown={(e) => { if (e.key === 'Backspace') { e.preventDefault(); const arr = (confirmSecretCode + '    ').split('').slice(0, 4); if (arr[idx]?.trim()) { arr[idx] = ' '; setConfirmSecretCode(arr.join('').trimEnd()) } else if (idx > 0) { arr[idx - 1] = ' '; setConfirmSecretCode(arr.join('').trimEnd()); document.getElementById(`pc-conf-${idx - 1}`)?.focus() } } }}
+                              className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {secretCodeError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center">
+                          {secretCodeError}
+                        </motion.p>
+                      )}
+                      {secretCodeSuccess && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2 flex items-center justify-center gap-2">
+                          <Check className="w-4 h-4" /> Code saved!
+                        </motion.p>
+                      )}
+                      <div className="flex gap-3 pt-1">
+                        <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                        <button
+                          onClick={() => {
+                            const cleanNew = newSecretCode.replace(/\s/g, '')
+                            const cleanConfirm = confirmSecretCode.replace(/\s/g, '')
+                            if (secretCode) {
+                              const cleanCurrent = currentSecretCodeInput.replace(/\s/g, '')
+                              if (cleanCurrent.length !== 4) { setSecretCodeError('Enter your current 4-digit code'); return }
+                              if (cleanCurrent !== secretCode) { setSecretCodeError('Current code is incorrect'); return }
+                            }
+                            if (cleanNew.length !== 4) { setSecretCodeError('Must be exactly 4 digits'); return }
+                            if (cleanNew !== cleanConfirm) { setSecretCodeError('Codes do not match'); return }
+                            localStorage.setItem('spacesSecretCode', cleanNew)
+                            setSecretCode(cleanNew)
+                            setSecretCodeSuccess(true)
+                            setTimeout(() => closeModal(), 1200)
+                          }}
+                          disabled={secretCodeSuccess}
+                          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm"
+                        >
+                          Save code
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -1508,6 +1952,243 @@ export default function SpaceSelector() {
                         className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2"
                       >
                         {joinLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : 'Request to join'}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* UNLOCK VAULT */}
+              {modal === 'unlock-vault' && (
+                <>
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold/20 to-peach/40 flex items-center justify-center mb-4 shadow-inner">
+                      <Lock className="w-7 h-7 text-gold/80" />
+                    </div>
+                    <h2 className="font-serif text-2xl text-warmDark">Secret Vault</h2>
+                    <p className="font-handwriting text-lg text-warmDark/60 mt-1">Enter your 4-digit secrecy code</p>
+                  </div>
+                  <div className="flex justify-center gap-3 mb-4">
+                    {[0, 1, 2, 3].map((idx) => (
+                      <input
+                        key={idx}
+                        id={`vault-pin-${idx}`}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={vaultPinInput[idx] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/, '')
+                          if (!val) return
+                          const arr = (vaultPinInput + '    ').split('').slice(0, 4)
+                          arr[idx] = val
+                          const next = arr.join('').trim()
+                          setVaultPinInput(next)
+                          setVaultPinError('')
+                          if (idx < 3) document.getElementById(`vault-pin-${idx + 1}`)?.focus()
+                          if (next.length === 4) {
+                            if (next === secretCode) {
+                              setVaultOpen(true)
+                              closeModal()
+                            } else {
+                              setVaultPinError('Incorrect code. Try again.')
+                              setVaultPinInput('')
+                              document.getElementById('vault-pin-0')?.focus()
+                            }
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Backspace') {
+                            e.preventDefault()
+                            const arr = (vaultPinInput + '    ').split('').slice(0, 4)
+                            if (arr[idx] && arr[idx].trim()) {
+                              arr[idx] = ' '
+                              setVaultPinInput(arr.join('').trimEnd())
+                            } else if (idx > 0) {
+                              arr[idx - 1] = ' '
+                              setVaultPinInput(arr.join('').trimEnd())
+                              document.getElementById(`vault-pin-${idx - 1}`)?.focus()
+                            }
+                            setVaultPinError('')
+                          }
+                        }}
+                        autoFocus={idx === 0}
+                        className="w-14 h-14 rounded-2xl bg-white/60 border-2 border-warmMid/20 text-center text-xl font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                      />
+                    ))}
+                  </div>
+                  {vaultPinError && (
+                    <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                      className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center mb-3">
+                      {vaultPinError}
+                    </motion.p>
+                  )}
+                  <button onClick={closeModal} className="w-full py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                </>
+              )}
+
+              {/* SET / CHANGE SECRECY CODE */}
+              {modal === 'set-secret-code' && (
+                <>
+                  <div className="flex flex-col items-center mb-5">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center mb-3">
+                      <Lock className="w-6 h-6 text-gold/80" />
+                    </div>
+                    <h2 className="font-serif text-2xl text-warmDark">{secretCode ? 'Change secrecy code' : 'Set secrecy code'}</h2>
+                    <p className="font-handwriting text-lg text-warmDark/60 mt-1 text-center">
+                      {secretCode ? 'Choose a new 4-digit code for your vault' : 'Create a 4-digit code to protect your hidden spaces'}
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    {secretCode && (
+                      <div>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2">Current code</label>
+                        <div className="flex gap-3 justify-center">
+                          {[0, 1, 2, 3].map((idx) => (
+                            <input
+                              key={idx}
+                              id={`cur-code-${idx}`}
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={1}
+                              value={currentSecretCodeInput[idx] || ''}
+                              autoFocus={idx === 0}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/, '')
+                                if (!val) return
+                                const arr = (currentSecretCodeInput + '    ').split('').slice(0, 4)
+                                arr[idx] = val
+                                setCurrentSecretCodeInput(arr.join('').trimEnd())
+                                setSecretCodeError('')
+                                if (idx < 3) document.getElementById(`cur-code-${idx + 1}`)?.focus()
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Backspace') {
+                                  e.preventDefault()
+                                  const arr = (currentSecretCodeInput + '    ').split('').slice(0, 4)
+                                  if (arr[idx]?.trim()) { arr[idx] = ' '; setCurrentSecretCodeInput(arr.join('').trimEnd()) }
+                                  else if (idx > 0) { arr[idx - 1] = ' '; setCurrentSecretCodeInput(arr.join('').trimEnd()); document.getElementById(`cur-code-${idx - 1}`)?.focus() }
+                                }
+                              }}
+                              className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="font-handwriting text-warmDark/70 text-base block mb-2">{secretCode ? 'New code' : 'Your code'}</label>
+                      <div className="flex gap-3 justify-center">
+                        {[0, 1, 2, 3].map((idx) => (
+                          <input
+                            key={idx}
+                            id={`new-code-${idx}`}
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={newSecretCode[idx] || ''}
+                            autoFocus={!secretCode && idx === 0}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/, '')
+                              if (!val) return
+                              const arr = (newSecretCode + '    ').split('').slice(0, 4)
+                              arr[idx] = val
+                              setNewSecretCode(arr.join('').trimEnd())
+                              setSecretCodeError('')
+                              if (idx < 3) document.getElementById(`new-code-${idx + 1}`)?.focus()
+                              else document.getElementById('conf-code-0')?.focus()
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Backspace') {
+                                e.preventDefault()
+                                const arr = (newSecretCode + '    ').split('').slice(0, 4)
+                                if (arr[idx]?.trim()) { arr[idx] = ' '; setNewSecretCode(arr.join('').trimEnd()) }
+                                else if (idx > 0) { arr[idx - 1] = ' '; setNewSecretCode(arr.join('').trimEnd()); document.getElementById(`new-code-${idx - 1}`)?.focus() }
+                              }
+                            }}
+                            className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="font-handwriting text-warmDark/70 text-base block mb-2">Confirm code</label>
+                      <div className="flex gap-3 justify-center">
+                        {[0, 1, 2, 3].map((idx) => (
+                          <input
+                            key={idx}
+                            id={`conf-code-${idx}`}
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={confirmSecretCode[idx] || ''}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/, '')
+                              if (!val) return
+                              const arr = (confirmSecretCode + '    ').split('').slice(0, 4)
+                              arr[idx] = val
+                              setConfirmSecretCode(arr.join('').trimEnd())
+                              setSecretCodeError('')
+                              if (idx < 3) document.getElementById(`conf-code-${idx + 1}`)?.focus()
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Backspace') {
+                                e.preventDefault()
+                                const arr = (confirmSecretCode + '    ').split('').slice(0, 4)
+                                if (arr[idx]?.trim()) { arr[idx] = ' '; setConfirmSecretCode(arr.join('').trimEnd()) }
+                                else if (idx > 0) { arr[idx - 1] = ' '; setConfirmSecretCode(arr.join('').trimEnd()); document.getElementById(`conf-code-${idx - 1}`)?.focus() }
+                              }
+                            }}
+                            className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {secretCodeError && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center">
+                        {secretCodeError}
+                      </motion.p>
+                    )}
+                    {secretCodeSuccess && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2 flex items-center justify-center gap-2">
+                        <Check className="w-4 h-4" /> Code saved!
+                      </motion.p>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={() => { closeModal(); if (pendingHideAfterCode) { setPendingHideAfterCode(false); setHideSelectMode(false); setSelectedToHide(new Set()) } }} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all">Cancel</button>
+                      <button
+                        onClick={() => {
+                          const cleanNew = newSecretCode.replace(/\s/g, '')
+                          const cleanConfirm = confirmSecretCode.replace(/\s/g, '')
+                          if (secretCode) {
+                            const cleanCurrent = currentSecretCodeInput.replace(/\s/g, '')
+                            if (cleanCurrent.length !== 4) { setSecretCodeError('Enter your current 4-digit code'); return }
+                            if (cleanCurrent !== secretCode) { setSecretCodeError('Current code is incorrect'); return }
+                          }
+                          if (cleanNew.length !== 4) { setSecretCodeError('New code must be exactly 4 digits'); return }
+                          if (cleanNew !== cleanConfirm) { setSecretCodeError('Codes do not match'); return }
+                          localStorage.setItem('spacesSecretCode', cleanNew)
+                          setSecretCode(cleanNew)
+                          setSecretCodeSuccess(true)
+                          // If pending hide, complete it now
+                          if (pendingHideAfterCode) {
+                            const newHidden = new Set(selectedToHide)
+                            localStorage.setItem('hiddenSpaceIds', JSON.stringify(Array.from(newHidden)))
+                            setHiddenSpaceIds(newHidden)
+                            setSelectedToHide(new Set())
+                            setHideSelectMode(false)
+                            setPendingHideAfterCode(false)
+                          }
+                          setTimeout(() => closeModal(), 1200)
+                        }}
+                        disabled={secretCodeSuccess}
+                        className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2"
+                      >
+                        Save code
                       </button>
                     </div>
                   </div>
