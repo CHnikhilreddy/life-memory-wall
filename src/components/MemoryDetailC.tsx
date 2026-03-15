@@ -265,6 +265,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
       text: memory.story || '',
       photo: coverPhoto,
       date: memory.date,
+      canvasData: undefined as CanvasData | undefined,
     }] : []),
     // Substory slides
     ...substories.map((sub) => ({
@@ -815,7 +816,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                   <p className="font-handwriting text-lg text-warmDark/75">loading stories...</p>
                 </div>
 
-              ) : substories.length === 0 && !memory.canvasData ? (
+              ) : substories.length === 0 ? (
                 /* Empty state — only show if no canvas layout either */
                 <div className="py-16">
                   <p className="font-handwriting text-3xl text-warmDark/70 mb-2">No stories yet</p>
