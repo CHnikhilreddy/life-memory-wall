@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, Plus, Image, BookOpen, Camera, Images, Upload, Loader2, X, ChevronLeft, ChevronRight, Pencil, Trash2, Check, MoreVertical, Play, Pause, Crop } from 'lucide-react'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Memory, SubStory } from '../types'
-import { uploadMultipleImages } from '../cloudinary'
+import { uploadMultipleImages, thumbnailUrl, mediumUrl, fullUrl } from '../cloudinary'
 import RichTextEditor from './RichTextEditor'
 import ImageCropper from './ImageCropper'
 
@@ -255,9 +255,10 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
   /** Clickable photo wrapper */
   const ClickablePhoto = ({ url, className }: { url: string; className: string }) => (
     <img
-      src={url}
+      src={mediumUrl(url)}
       alt=""
       className={`${className} cursor-pointer hover:brightness-95 transition-all`}
+      loading="lazy"
       onClick={() => openLightbox(url)}
     />
   )
@@ -613,7 +614,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
       {/* ── Cover photo ── */}
       {coverPhoto && (
         <div ref={coverRef} className="relative flex-shrink-0 h-56 overflow-hidden">
-          <img src={coverPhoto} alt={memory.title} className="w-full h-full object-cover object-center" />
+          <img src={mediumUrl(coverPhoto)} alt={memory.title} className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
             <div className="flex items-end justify-between gap-2 mb-1">
@@ -846,7 +847,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                         }}
                       >
                         {item.url ? (
-                          <img src={item.url} alt={item.title} className="w-full object-contain" />
+                          <img src={mediumUrl(item.url)} alt={item.title} className="w-full object-contain" loading="lazy" />
                         ) : (
                           <div className="h-32 flex items-center justify-center">
                             <Image className="w-8 h-8 text-warmDark/75" />
@@ -860,9 +861,6 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                           </div>
                         )}
                       </div>
-                      {item.caption && (
-                        <p className="text-sm text-warmDark/75 mt-1.5 line-clamp-2 font-sans">{item.caption}</p>
-                      )}
                     </motion.div>
                   ))}
                 </div>
@@ -955,7 +953,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                 >
                   {slideshowSlides[slideshowIdx]?.photo ? (
                     <img
-                      src={slideshowSlides[slideshowIdx].photo!}
+                      src={fullUrl(slideshowSlides[slideshowIdx].photo!)}
                       alt=""
                       className="max-h-[60vh] max-w-full object-contain rounded-2xl shadow-2xl"
                     />
@@ -1085,7 +1083,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.18 }}
-              src={lightboxPhotos[lightboxIdx]}
+              src={fullUrl(lightboxPhotos[lightboxIdx])}
               alt=""
               className="max-h-[85vh] max-w-[88vw] object-contain rounded-xl"
               onClick={(e) => e.stopPropagation()}

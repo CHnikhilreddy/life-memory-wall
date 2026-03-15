@@ -11,6 +11,10 @@ interface AppState {
   activeSpaceData: MemorySpace | null
   loading: boolean
   pendingInvites: PendingInvite[]
+  memoryCursor: string | null
+  hasMoreMemories: boolean
+  loadingMore: boolean
+  fetchMoreMemories: () => Promise<void>
 
   init: () => Promise<void>
   login: (credentials?: { email?: string; phone?: string; name?: string; password?: string }) => Promise<void>
@@ -33,7 +37,7 @@ interface AppState {
   addSubstory: (spaceId: string, memoryId: string, substory: SubStory) => Promise<void>
   updateMemorySubstories: (spaceId: string, memoryId: string, substories: SubStory[]) => void
 
-  addSpace: (space: MemorySpace) => Promise<string | null>
+  addSpace: (space: MemorySpace) => Promise<any | null>
   updateSpace: (spaceId: string, data: { title?: string; coverEmoji?: string; coverIcon?: string; coverColor?: string; coverImage?: string; description?: string }) => Promise<void>
   deleteSpace: (spaceId: string) => Promise<void>
   updateSubstory: (spaceId: string, memoryId: string, substoryId: string, data: Partial<SubStory>) => Promise<void>
@@ -53,6 +57,9 @@ export const useStore = create<AppState>((set, get) => ({
   activeSpaceData: null,
   loading: false,
   pendingInvites: [],
+  memoryCursor: null,
+  hasMoreMemories: false,
+  loadingMore: false,
 
   init: async () => {
     const token = localStorage.getItem('token')
@@ -102,7 +109,7 @@ export const useStore = create<AppState>((set, get) => ({
   logout: () => {
     clearToken()
     localStorage.removeItem('activeSpaceId')
-    set({ isLoggedIn: false, currentUser: null, spaces: [], activeSpaceId: null, activeSpaceData: null, pendingInvites: [] })
+    set({ isLoggedIn: false, currentUser: null, spaces: [], activeSpaceId: null, activeSpaceData: null, pendingInvites: [], memoryCursor: null, hasMoreMemories: false, loadingMore: false })
   },
 
   fetchMyInvites: async () => {
@@ -137,19 +144,43 @@ export const useStore = create<AppState>((set, get) => ({
   setActiveSpace: async (id) => {
     if (!id) {
       localStorage.removeItem('activeSpaceId')
-      set({ activeSpaceId: null, activeSpaceData: null, loading: true })
+      set({ activeSpaceId: null, activeSpaceData: null, memoryCursor: null, hasMoreMemories: false, loading: true })
       await get().fetchSpaces()
       return
     }
     localStorage.setItem('activeSpaceId', id)
     set({ activeSpaceId: id, loading: true })
     try {
-      const spaceData = await api.getSpace(id)
-      set({ activeSpaceData: spaceData, loading: false })
+      const spaceData = await api.getSpacePaginated(id)
+      const { nextCursor, hasMore, ...rest } = spaceData
+      set({ activeSpaceData: rest, memoryCursor: nextCursor || null, hasMoreMemories: hasMore || false, loading: false })
     } catch (err) {
       console.error('Failed to fetch space:', err)
       localStorage.removeItem('activeSpaceId')
       set({ loading: false })
+    }
+  },
+
+  fetchMoreMemories: async () => {
+    const { activeSpaceId, memoryCursor, hasMoreMemories, loadingMore, activeSpaceData } = get()
+    if (!activeSpaceId || !hasMoreMemories || loadingMore || !memoryCursor) return
+
+    set({ loadingMore: true })
+    try {
+      const result = await api.getSpacePaginated(activeSpaceId, memoryCursor)
+      const newMemories = result.memories || []
+      set((state) => ({
+        activeSpaceData: state.activeSpaceData ? {
+          ...state.activeSpaceData,
+          memories: [...state.activeSpaceData.memories, ...newMemories],
+        } : state.activeSpaceData,
+        memoryCursor: result.nextCursor || null,
+        hasMoreMemories: result.hasMore || false,
+        loadingMore: false,
+      }))
+    } catch (err) {
+      console.error('Failed to fetch more memories:', err)
+      set({ loadingMore: false })
     }
   },
 
@@ -195,6 +226,21 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   addReaction: async (spaceId, memoryId, emoji) => {
+    // Optimistic update
+    set((state) => ({
+      activeSpaceData: state.activeSpaceData?.id === spaceId
+        ? {
+            ...state.activeSpaceData,
+            memories: state.activeSpaceData.memories.map((m) => {
+              if (m.id !== memoryId) return m
+              const reactions = { ...(m.reactions || {}) }
+              reactions[emoji] = (reactions[emoji] || 0) + 1
+              return { ...m, reactions }
+            }),
+          }
+        : state.activeSpaceData,
+    }))
+    // Save to DB in background
     try {
       const result = await api.addReaction(spaceId, memoryId, emoji)
       set((state) => ({
@@ -255,7 +301,7 @@ export const useStore = create<AppState>((set, get) => ({
         description: space.description,
       })
       await get().fetchSpaces()
-      return created?.id ?? null
+      return created ?? null
     } catch (err) {
       console.error('Failed to create space:', err)
       return null

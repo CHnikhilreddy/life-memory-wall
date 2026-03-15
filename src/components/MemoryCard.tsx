@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { MapPin, MessageCircle, Trash2, Edit3 } from 'lucide-react'
 import { useState } from 'react'
 import { Memory, SpaceMember } from '../types'
+import { thumbnailUrl } from '../cloudinary'
 
 interface Props {
   memory: Memory
@@ -65,9 +66,10 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
           {memory.photos && memory.photos.length > 0 ? (
             <>
               <img
-                src={memory.photos[0]}
+                src={thumbnailUrl(memory.photos[0])}
                 alt={memory.title}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
               {memory.photos.length > 1 && (
                 <div className="absolute bottom-2 right-2 glass rounded-full px-2 py-0.5">
@@ -115,7 +117,7 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
           </div>
         )}
 
-        {memory.reactions && Object.keys(memory.reactions).length > 0 && (
+        {spaceType !== 'personal' && memory.reactions && Object.keys(memory.reactions).length > 0 && (
           <div className="flex flex-wrap gap-2 mt-3">
             {Object.entries(memory.reactions).map(([emoji, count]) => (
               <button
@@ -185,35 +187,37 @@ export default function MemoryCard({ memory, index, side, onDelete, onReact, onE
           </motion.div>
         )}
 
-        {/* Reaction picker */}
-        <div className="mt-3 flex items-center gap-2">
-          <div className="relative">
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowReactions(!showReactions) }}
-              className="text-warmDark/75 hover:text-warmDark/75 text-sm transition-colors flex items-center gap-1"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="font-handwriting">react</span>
-            </button>
-            {showReactions && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                className="absolute bottom-full left-0 mb-2 glass rounded-full px-2 py-1 flex gap-1 z-20"
+        {/* Reaction picker — group spaces only */}
+        {spaceType !== 'personal' && (
+          <div className="mt-3 flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowReactions(!showReactions) }}
+                className="text-warmDark/75 hover:text-warmDark/75 text-sm transition-colors flex items-center gap-1"
               >
-                {reactionEmojis.map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={(e) => { e.stopPropagation(); onReact(memory.id, emoji); setShowReactions(false) }}
-                    className="hover:scale-125 transition-transform text-lg p-1"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </motion.div>
-            )}
+                <MessageCircle className="w-4 h-4" />
+                <span className="font-handwriting">react</span>
+              </button>
+              {showReactions && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  className="absolute bottom-full left-0 mb-2 glass rounded-full px-2 py-1 flex gap-1 z-20"
+                >
+                  {reactionEmojis.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={(e) => { e.stopPropagation(); onReact(memory.id, emoji); setShowReactions(false) }}
+                      className="hover:scale-125 transition-transform text-lg p-1"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </motion.div>
     </motion.div>
   )

@@ -34,3 +34,32 @@ export async function uploadMultipleImages(files: File[]): Promise<string[]> {
   const uploads = files.map(uploadImage)
   return Promise.all(uploads)
 }
+
+/**
+ * Transform a Cloudinary URL to serve an optimized version.
+ * Inserts transformation params before /upload/ in the URL.
+ */
+export function cloudinaryUrl(url: string, transforms: string): string {
+  if (!url || !url.includes('/upload/')) return url
+  return url.replace('/upload/', `/upload/${transforms}/`)
+}
+
+/** Thumbnail for cards: 400px wide, auto height, auto quality, auto format */
+export function thumbnailUrl(url: string): string {
+  return cloudinaryUrl(url, 'w_400,c_fill,q_auto,f_auto')
+}
+
+/** Medium size for detail views: 800px wide */
+export function mediumUrl(url: string): string {
+  return cloudinaryUrl(url, 'w_800,c_limit,q_auto,f_auto')
+}
+
+/** Full size with quality optimization */
+export function fullUrl(url: string): string {
+  return cloudinaryUrl(url, 'q_auto,f_auto')
+}
+
+/** Blur placeholder: tiny blurred version for progressive loading */
+export function blurPlaceholderUrl(url: string): string {
+  return cloudinaryUrl(url, 'w_50,e_blur:1000,q_auto,f_auto')
+}

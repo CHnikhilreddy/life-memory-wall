@@ -1,17 +1,19 @@
-import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, Send, Check, Mail, Loader2, X, UserMinus, LogOut } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Users, Check, Copy, Loader2, X, UserMinus, LogOut } from 'lucide-react'
 import { SpaceIconRenderer } from './SpaceIcons'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useInView } from 'react-intersection-observer'
+import { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react'
 import { useStore } from '../store/useStore'
 import { api } from '../api'
-import { Memory, SubStory, SpacePendingInvite } from '../types'
+import { Memory, SubStory } from '../types'
 import MemoryCard from './MemoryCard'
 import MemoryDetail from './MemoryDetailC'
-import CreateMemoryModal from './CreateMemoryModal'
 import FloatingNav from './FloatingNav'
 
+const CreateMemoryModal = lazy(() => import('./CreateMemoryModal'))
+
 export default function Timeline() {
-  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser, removeMember, leaveSpace, updateMemberPermission } =
+  const { activeSpaceData: space, setActiveSpace, addMemory, updateMemory, deleteMemory, addReaction, addSubstory, updateSubstory, deleteSubstory, getVisibleMemories, currentUser, removeMember, leaveSpace, updateMemberPermission, hasMoreMemories, loadingMore, fetchMoreMemories } =
     useStore()
   const [showCreate, setShowCreate] = useState(false)
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null)
@@ -51,30 +53,28 @@ export default function Timeline() {
   }, [])
 
   const [showMembers, setShowMembers] = useState(false)
-  const [membersTab, setMembersTab] = useState<'members' | 'invites'>('members')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteStatus, setInviteStatus] = useState<{ ok: boolean; msg: string } | null>(null)
-  const [inviting, setInviting] = useState(false)
-  const [pendingInvitesList, setPendingInvitesList] = useState<SpacePendingInvite[]>([])
-  const [invitesLoading, setInvitesLoading] = useState(false)
-  const [cancellingId, setCancellingId] = useState<string | null>(null)
+  const [codeCopied, setCodeCopied] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
   const [leaveConfirm, setLeaveConfirm] = useState(false)
   const [leaveLoading, setLeaveLoading] = useState(false)
   const [memberActionError, setMemberActionError] = useState('')
   const [updatingPermissionId, setUpdatingPermissionId] = useState<string | null>(null)
-  const inviteStatusTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => () => { if (inviteStatusTimerRef.current) clearTimeout(inviteStatusTimerRef.current) }, [])
 
 
-  const { scrollYProgress } = useScroll()
-  const pathLength = useTransform(scrollYProgress, [0, 1], [0, 1])
+  const { ref: loadMoreRef, inView } = useInView({ threshold: 0 })
+
+  useEffect(() => {
+    if (inView && hasMoreMemories && !loadingMore && !selectedMemoryId) {
+      fetchMoreMemories()
+    }
+  }, [inView, hasMoreMemories, loadingMore, selectedMemoryId])
+
 
   const visibleMemories = space ? getVisibleMemories(space) : []
   const sortedMemories = useMemo(
     () => [...visibleMemories].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [space?.id, visibleMemories.length, JSON.stringify(visibleMemories.map(m => m.id + m.date + (m.substories?.length ?? 0)))]
+    [space?.id, visibleMemories.length, JSON.stringify(visibleMemories.map(m => m.id + m.date + JSON.stringify(m.reactions || {})))]
   )
 
   const timelineStats = useMemo(() => {
@@ -198,7 +198,6 @@ export default function Timeline() {
   const myRole = myMember?.role
   const myPermission = myMember?.role === 'owner' ? 'edit' : (myMember?.permission ?? 'edit')
   const canEdit = myPermission === 'edit'
-  const canInvite = !!myRole && space.type === 'group'
   const allActiveMembers = space.membersList.filter((m) => m.status === 'active')
 
   // Members visible for the currently selected memory
@@ -207,72 +206,6 @@ export default function Timeline() {
         ? allActiveMembers.filter((m) => selectedMemory.visibleTo!.includes(m.userId))
         : allActiveMembers)
     : allActiveMembers
-
-  const handleInvite = async () => {
-    if (!inviteEmail.trim() || !inviteEmail.includes('@')) return
-    setInviting(true)
-    setInviteStatus(null)
-    try {
-      const result = await api.inviteByEmail(space.id, inviteEmail.trim())
-      setInviteStatus({ ok: true, msg: result.message })
-      setInviteEmail('')
-    } catch (err: any) {
-      setInviteStatus({ ok: false, msg: err.message || 'Failed to send invite' })
-    } finally {
-      setInviting(false)
-      if (inviteStatusTimerRef.current) clearTimeout(inviteStatusTimerRef.current)
-      inviteStatusTimerRef.current = setTimeout(() => setInviteStatus(null), 4000)
-    }
-  }
-
-const loadPendingInvites = async () => {
-    if (!canInvite) return
-    setInvitesLoading(true)
-    try {
-      const list = await api.getSpacePendingInvites(space.id)
-      setPendingInvitesList(list)
-    } catch {}
-    finally { setInvitesLoading(false) }
-  }
-
-  const handleCancelInvite = async (inviteId: string) => {
-    setCancellingId(inviteId)
-    try {
-      await api.cancelPendingInvite(space.id, inviteId)
-      setPendingInvitesList((prev) => prev.filter((i) => i.id !== inviteId))
-    } catch {}
-    finally { setCancellingId(null) }
-  }
-
-  const InviteSection = canInvite ? (
-    <div className="mt-4 pt-4 border-t border-warmMid/10 space-y-3">
-      <div>
-        <p className="font-sans text-sm text-warmDark/75 mb-1.5">Invite by email</p>
-        <div className="flex gap-2">
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
-            placeholder="email@example.com"
-            className="flex-1 bg-white/40 rounded-xl px-3 py-2 text-sm text-warmDark font-sans outline-none focus:ring-2 focus:ring-gold/30 transition-all"
-          />
-          <button
-            onClick={handleInvite}
-            disabled={inviting}
-            className="p-2 rounded-xl bg-gradient-to-br from-gold/80 to-coral/70 text-white flex-shrink-0 disabled:opacity-50"
-          >
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
-        {inviteStatus && (
-          <p className={`text-sm mt-2 font-sans ${inviteStatus.ok ? 'text-teal' : 'text-coral'}`}>
-            {inviteStatus.msg}
-          </p>
-        )}
-      </div>
-    </div>
-  ) : null
 
   const handleRemoveMember = async (userId: string) => {
     if (!space) return
@@ -379,93 +312,63 @@ const loadPendingInvites = async () => {
     </>
   )
 
-  // Panel for normal mode — shows all space members + pending invites tab
+  // Panel for normal mode — shows all space members + invite code + join requests
   const SpaceMembersPanel = (
     <>
-      <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false); setInviteStatus(null); setMembersTab('members') }} />
+      <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false) }} />
       <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl w-72 shadow-xl max-h-[80vh] overflow-y-auto">
-        {/* Tab bar */}
-        <div className="flex border-b border-warmMid/10">
-          <button
-            onClick={() => setMembersTab('members')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-sans transition-colors ${membersTab === 'members' ? 'text-warmDark border-b-2 border-gold/60' : 'text-warmDark/75 hover:text-warmDark/70'}`}
-          >
-            <Users className="w-3.5 h-3.5" /> Members
-          </button>
-          {canInvite && (
-            <button
-              onClick={() => { setMembersTab('invites'); if (membersTab !== 'invites') loadPendingInvites() }}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-sans transition-colors ${membersTab === 'invites' ? 'text-warmDark border-b-2 border-gold/60' : 'text-warmDark/75 hover:text-warmDark/70'}`}
-            >
-              <Mail className="w-3.5 h-3.5" /> Pending
-            </button>
-          )}
-        </div>
+        <div className="p-4 space-y-4">
+          {/* Members list */}
+          {renderMembersList(allActiveMembers, true)}
 
-        <div className="p-4">
-          {membersTab === 'members' ? (
-            <>
-              {renderMembersList(allActiveMembers, true)}
-              {memberActionError && (
-                <p className="text-sm text-coral font-sans mt-2">{memberActionError}</p>
-              )}
-              {InviteSection}
-              {/* Leave group — for non-owners in group spaces */}
-              {space.type === 'group' && myRole && myRole !== 'owner' && (
-                <div className="mt-4 pt-3 border-t border-warmMid/10">
-                  {!leaveConfirm ? (
-                    <button onClick={() => setLeaveConfirm(true)}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-coral/70 hover:text-coral hover:bg-coral/8 transition-colors text-sm font-sans">
-                      <LogOut className="w-3.5 h-3.5" /> Leave group
+          {memberActionError && (
+            <p className="text-sm text-coral font-sans">{memberActionError}</p>
+          )}
+
+          {/* Invite Code — owner/admin only */}
+          {space.inviteCode && (
+            <div className="pt-3 border-t border-warmMid/10">
+              <p className="font-sans text-xs text-warmDark/50 mb-2">Invite code</p>
+              <div className="flex items-center gap-2 bg-white/40 rounded-xl px-3 py-2">
+                <span className="font-mono text-sm tracking-[0.15em] text-warmDark font-semibold flex-1 select-all">{space.inviteCode}</span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(space.inviteCode || '')
+                    setCodeCopied(true)
+                    setTimeout(() => setCodeCopied(false), 2000)
+                  }}
+                  className="p-1.5 rounded-lg hover:bg-warmMid/10 transition-colors text-warmDark/50 hover:text-warmDark"
+                  title="Copy code"
+                >
+                  {codeCopied ? <Check className="w-3.5 h-3.5 text-teal" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+              <p className="font-sans text-[11px] text-warmDark/40 mt-1">Share this code so others can request to join</p>
+            </div>
+          )}
+
+          {/* Leave group — for non-owners in group spaces */}
+          {space.type === 'group' && myRole && myRole !== 'owner' && (
+            <div className="pt-3 border-t border-warmMid/10">
+              {!leaveConfirm ? (
+                <button onClick={() => setLeaveConfirm(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-coral/70 hover:text-coral hover:bg-coral/8 transition-colors text-sm font-sans">
+                  <LogOut className="w-3.5 h-3.5" /> Leave group
+                </button>
+              ) : (
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-warmDark/70 font-sans">Leave <strong>{space.title}</strong>?</p>
+                  <div className="flex gap-2">
+                    <button onClick={() => setLeaveConfirm(false)} disabled={leaveLoading}
+                      className="flex-1 py-2 rounded-xl text-warmDark/75 hover:bg-white/30 transition-all text-sm font-sans">Cancel</button>
+                    <button onClick={handleLeaveSpace} disabled={leaveLoading}
+                      className="flex-1 py-2 rounded-xl bg-coral/80 text-white text-sm font-sans disabled:opacity-60 flex items-center justify-center gap-1">
+                      {leaveLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Leaving…</> : 'Leave'}
                     </button>
-                  ) : (
-                    <div className="text-center space-y-2">
-                      <p className="text-sm text-warmDark/70 font-sans">Leave <strong>{space.title}</strong>?</p>
-                      <div className="flex gap-2">
-                        <button onClick={() => setLeaveConfirm(false)} disabled={leaveLoading}
-                          className="flex-1 py-2 rounded-xl text-warmDark/75 hover:bg-white/30 transition-all text-sm font-sans">Cancel</button>
-                        <button onClick={handleLeaveSpace} disabled={leaveLoading}
-                          className="flex-1 py-2 rounded-xl bg-coral/80 text-white text-sm font-sans disabled:opacity-60 flex items-center justify-center gap-1">
-                          {leaveLoading ? <><Loader2 className="w-3 h-3 animate-spin" /> Leaving…</> : 'Leave'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
               )}
-            </>
-          ) : (
-            invitesLoading ? (
-              <div className="flex items-center justify-center gap-2 py-8 text-warmDark/75">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm font-sans">Loading...</span>
-              </div>
-            ) : pendingInvitesList.length === 0 ? (
-              <p className="text-center font-handwriting text-warmDark/70 py-8">No pending invites</p>
-            ) : (
-              <ul className="space-y-2">
-                {pendingInvitesList.map((inv) => (
-                  <li key={inv.id} className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-lavender/60 to-peach/60 flex items-center justify-center text-sm font-sans text-warmDark flex-shrink-0">
-                      {inv.email.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-sans text-sm text-warmDark/70 flex-1 truncate">{inv.email}</span>
-                    {inv.status === 'rejected' ? (
-                      <span className="text-sm font-sans text-coral/70 bg-coral/10 px-2 py-0.5 rounded-full flex-shrink-0">declined</span>
-                    ) : (
-                      <button
-                        onClick={() => handleCancelInvite(inv.id)}
-                        disabled={cancellingId === inv.id}
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-warmDark/70 hover:text-coral/70 hover:bg-coral/10 transition-colors flex-shrink-0 disabled:opacity-40"
-                        title="Cancel invite"
-                      >
-                        {cancellingId === inv.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            )
+            </div>
           )}
         </div>
       </div>
@@ -631,12 +534,10 @@ const loadPendingInvites = async () => {
                 className="absolute left-1/2 -translate-x-1/2 top-0 w-2 h-full pointer-events-none hidden md:block"
                 style={{ overflow: 'visible' }}
               >
-                <motion.line
+                <line
                   x1="1" y1="0" x2="1" y2="100%"
                   stroke="rgba(212, 165, 116, 0.2)"
                   strokeWidth="2" strokeDasharray="8 8"
-                  className="timeline-path"
-                  style={{ pathLength }}
                 />
               </svg>
             )}
@@ -648,12 +549,7 @@ const loadPendingInvites = async () => {
 
             {/* Mobile left path */}
             {!isDetailOpen && (
-              <div className="absolute left-6 md:hidden top-0 bottom-0 w-px">
-                <motion.div
-                  className="w-full h-full bg-gradient-to-b from-gold/20 via-coral/20 to-teal/20"
-                  style={{ scaleY: pathLength, transformOrigin: 'top' }}
-                />
-              </div>
+              <div className="absolute left-6 md:hidden top-0 bottom-0 w-px bg-gradient-to-b from-gold/20 via-coral/20 to-teal/20" />
             )}
 
             {/* Cards */}
@@ -709,9 +605,7 @@ const loadPendingInvites = async () => {
                       viewport={{ once: true }}
                       className="absolute left-6 md:left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-gradient-to-br from-gold to-coral z-10 shadow-md hidden md:block"
                       style={{ top: '2rem' }}
-                    >
-                      <div className="absolute inset-0 rounded-full animate-ping bg-gold/30" />
-                    </motion.div>
+                    />
 
                     {/* Mobile dot */}
                     <motion.div
@@ -743,6 +637,18 @@ const loadPendingInvites = async () => {
                 )
               })}
             </div>
+
+            {/* Infinite scroll trigger */}
+            {!isDetailOpen && hasMoreMemories && (
+              <div ref={loadMoreRef} className="flex justify-center py-8">
+                {loadingMore && (
+                  <div className="flex items-center gap-2 text-warmDark/50">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="font-handwriting text-lg">Loading more memories...</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Empty state */}
             {sortedMemories.length === 0 && (
@@ -818,15 +724,17 @@ const loadPendingInvites = async () => {
       )}
 
       {/* Create/Edit modal */}
-      <CreateMemoryModal
-        isOpen={showCreate}
-        onClose={() => { setShowCreate(false); setEditingMemory(null) }}
-        onSave={handleSave}
-        editMemory={editingMemory}
-        spaceType={space.type}
-        members={space.membersList}
-        currentUserId={currentUser?.id}
-      />
+      <Suspense fallback={null}>
+        <CreateMemoryModal
+          isOpen={showCreate}
+          onClose={() => { setShowCreate(false); setEditingMemory(null) }}
+          onSave={handleSave}
+          editMemory={editingMemory}
+          spaceType={space.type}
+          members={space.membersList}
+          currentUserId={currentUser?.id}
+        />
+      </Suspense>
     </div>
   )
 }
