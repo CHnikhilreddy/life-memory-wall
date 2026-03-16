@@ -266,7 +266,7 @@ export default function SpaceSelector() {
     }
     setEditError('')
     const iconId = makeIconId(editIcon, editIconVariation)
-    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage || undefined, coverImageOffsetX: editCoverImagePosX, coverImageOffsetY: editCoverImagePosY, coverImageScale: editCoverImageScale, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
+    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage, coverImageOffsetX: editCoverImagePosX, coverImageOffsetY: editCoverImagePosY, coverImageScale: editCoverImageScale, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
