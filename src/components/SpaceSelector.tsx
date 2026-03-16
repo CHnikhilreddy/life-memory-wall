@@ -266,7 +266,7 @@ export default function SpaceSelector() {
     }
     setEditError('')
     const iconId = makeIconId(editIcon, editIconVariation)
-    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage || undefined, coverImageOffsetX: editCoverImagePosX, coverImageOffsetY: editCoverImagePosY, coverImageScale: editCoverImageScale, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
+    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage, coverImageOffsetX: editCoverImagePosX, coverImageOffsetY: editCoverImagePosY, coverImageScale: editCoverImageScale, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
@@ -1259,7 +1259,7 @@ export default function SpaceSelector() {
                           const isSelected = editIcon === iconDef.id && editIconVariation === selectedTheme
                           return (
                             <button key={iconDef.id}
-                              onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(selectedTheme) }}
+                              onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(selectedTheme); setEditCoverImage('') }}
                               className={`w-full aspect-square rounded-full flex items-center justify-center transition-all overflow-hidden ${isSelected ? 'ring-2 ring-gold/70 scale-110 shadow-md' : 'hover:scale-105 hover:shadow-sm'}`}
                               title={iconDef.name}
                             >
