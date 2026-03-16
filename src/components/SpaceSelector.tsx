@@ -1259,7 +1259,7 @@ export default function SpaceSelector() {
                           const isSelected = editIcon === iconDef.id && editIconVariation === selectedTheme
                           return (
                             <button key={iconDef.id}
-                              onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(selectedTheme) }}
+                              onClick={() => { setEditIcon(iconDef.id); setEditIconVariation(selectedTheme); setEditCoverImage('') }}
                               className={`w-full aspect-square rounded-full flex items-center justify-center transition-all overflow-hidden ${isSelected ? 'ring-2 ring-gold/70 scale-110 shadow-md' : 'hover:scale-105 hover:shadow-sm'}`}
                               title={iconDef.name}
                             >
