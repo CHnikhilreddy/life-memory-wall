@@ -18,7 +18,7 @@ export default {
       },
       fontFamily: {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
-        sans: ['"DM Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"DM Sans"', 'system-ui', '-apple-system', 'sans-serif'],
         handwriting: ['"Caveat"', 'cursive'],
         // font demo categories
         poetic: ['"Cormorant Garamond"', 'Georgia', 'serif'],

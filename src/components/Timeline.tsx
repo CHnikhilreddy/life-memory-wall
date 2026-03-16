@@ -305,7 +305,7 @@ export default function Timeline() {
   const MemoryMembersPanel = (
     <>
       <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false) }} />
-      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-3 shadow-xl w-60">
+      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-2.5 shadow-xl w-48">
         <p className="font-sans text-xs text-warmDark/50 mb-2">
           {selectedMemory?.visibleTo && selectedMemory.visibleTo.length > 0 ? 'Visible to' : 'Everyone in the space'}
         </p>
@@ -327,8 +327,8 @@ export default function Timeline() {
   const SpaceMembersPanel = (
     <>
       <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false) }} />
-      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl w-72 shadow-xl max-h-[80vh] overflow-y-auto">
-        <div className="p-4 space-y-4">
+      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl w-56 shadow-xl max-h-[80vh] overflow-y-auto">
+        <div className="p-3 space-y-3">
           {/* Members list */}
           {renderMembersList(allActiveMembers, true)}
 
@@ -338,10 +338,10 @@ export default function Timeline() {
 
           {/* Invite Code — owner/admin only */}
           {space.inviteCode && (
-            <div className="pt-3 border-t border-warmMid/10">
-              <p className="font-sans text-xs text-warmDark/50 mb-2">Invite code</p>
-              <div className="flex items-center gap-2 bg-white/40 rounded-xl px-3 py-2">
-                <span className="font-mono text-sm tracking-[0.15em] text-warmDark font-semibold flex-1 select-all">{space.inviteCode}</span>
+            <div className="pt-2 border-t border-warmMid/10">
+              <p className="font-sans text-xs text-warmDark/50 mb-1">Invite code</p>
+              <div className="flex items-center gap-1.5 bg-white/40 rounded-lg px-2 py-1.5">
+                <span className="font-mono text-xs tracking-[0.12em] text-warmDark font-semibold flex-1 select-all">{space.inviteCode}</span>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(space.inviteCode || '')
@@ -391,7 +391,7 @@ export default function Timeline() {
 
       {/* ── DETAIL MODE: slim sticky header ── */}
       {isDetailOpen && (
-        <div className="sticky top-0 z-30 rounded-b-3xl flex items-center justify-between px-4 py-2" style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}>
+        <div className="sticky top-0 z-30 rounded-b-3xl hidden md:flex items-center justify-between px-4 pb-2 pt-2 pt-safe" style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}>
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); goBack() }}
@@ -439,7 +439,7 @@ export default function Timeline() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="sticky top-0 z-30 rounded-b-3xl px-4 py-4"
+          className="sticky top-0 z-30 rounded-b-3xl px-4 pb-4 pt-4 pt-safe"
           style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}
         >
           <div className="relative max-w-6xl mx-auto flex items-center justify-between">
@@ -533,7 +533,7 @@ export default function Timeline() {
       )}
 
       {/* Main content */}
-      <div className={`relative z-0 max-w-7xl mx-auto px-4 ${isDetailOpen ? 'pt-0 pb-0' : 'pb-16 pt-4'}`}>
+      <div className={`relative z-0 max-w-7xl mx-auto px-1.5 md:px-4 ${isDetailOpen ? 'pt-0 pb-0' : 'pb-16 pt-4'}`}>
         <div className="flex gap-6 relative">
 
           {/* LEFT: Timeline list — collapses when text style panel or edit panel opens */}
@@ -564,11 +564,11 @@ export default function Timeline() {
 
             {/* Mobile left path */}
             {!isDetailOpen && (
-              <div className="absolute left-6 md:hidden top-0 bottom-0 w-px bg-gradient-to-b from-gold/20 via-coral/20 to-teal/20" />
+              <div className="absolute left-[7px] md:hidden top-0 bottom-0 w-px bg-gradient-to-b from-gold/20 via-coral/20 to-teal/20" />
             )}
 
             {/* Cards */}
-            <div className={isDetailOpen ? 'space-y-3' : 'space-y-8 md:space-y-10'}>
+            <div className={isDetailOpen ? 'space-y-3' : 'space-y-4 md:space-y-10'}>
               {sortedMemories.map((memory, i) => {
                 const side = i % 2 === 0 ? 'left' : 'right'
                 const isSelected = memory.id === selectedMemoryId
@@ -627,12 +627,12 @@ export default function Timeline() {
                       initial={{ scale: 0 }}
                       whileInView={{ scale: 1 }}
                       viewport={{ once: true }}
-                      className="absolute left-[18px] w-4 h-4 rounded-full bg-gradient-to-br from-gold to-coral z-10 shadow-md md:hidden"
+                      className="absolute left-0 w-4 h-4 rounded-full bg-gradient-to-br from-gold to-coral z-10 shadow-md md:hidden"
                       style={{ top: '1rem' }}
                     />
 
                     {/* Card wrapper */}
-                    <div className={`md:w-[48%] ml-12 md:ml-0 ${
+                    <div className={`md:w-[48%] ml-5 md:ml-0 ${
                       side === 'left' ? 'md:mr-auto' : 'md:ml-auto'
                     }`}>
                       <MemoryCard
@@ -701,6 +701,7 @@ export default function Timeline() {
                   canEdit={canEdit}
 
                   onEditingChange={() => {}}
+                  members={memoryMembers.map(m => ({ userId: m.userId, name: m.name }))}
                 />
               </motion.div>
             )}
@@ -724,10 +725,11 @@ export default function Timeline() {
                     onAddSubstory={handleAddSubstory}
                     onUpdateSubstory={handleUpdateSubstory}
                     onDeleteSubstory={handleDeleteSubstory}
-  
+
                     canEdit={canEdit}
-  
+
                     onEditingChange={() => {}}
+                    members={memoryMembers.map(m => ({ userId: m.userId, name: m.name }))}
                   />
                 </div>
               </motion.div>

@@ -378,10 +378,10 @@ export default function SpaceSelector() {
   }
 
   return (
-    <div className="h-full gradient-bg relative overflow-hidden">
+    <div className="min-h-screen h-full gradient-bg relative overflow-hidden">
       <ParticleBackground />
 
-      <div className="relative z-10 h-full overflow-y-auto flex flex-col items-center px-4 pt-16 pb-8">
+      <div className="relative z-10 h-full overflow-y-auto flex flex-col items-center px-4 pt-16 pb-24">
         {/* Top Right Controls */}
         <div className="fixed top-0 right-0 z-30 pr-6 flex items-center gap-3" style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 50px)' }}>
             {/* Profile Menu Dropdown Container */}
@@ -415,7 +415,7 @@ export default function SpaceSelector() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-14 z-20 w-60 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
+                      className="absolute right-0 top-14 z-20 w-52 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
                     >
                       <AnimatePresence mode="wait">
                         {!showInvites ? (
@@ -427,16 +427,16 @@ export default function SpaceSelector() {
                             transition={{ duration: 0.15 }}
                           >
                             {/* User Info Header */}
-                            <div className="px-5 py-4 border-b border-warmMid/10 bg-gradient-to-r from-gold/10 to-coral/10">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center ring-2 ring-white/60 flex-shrink-0">
-                                  <span className="font-serif text-base text-white font-semibold">{currentUser?.name?.[0]?.toUpperCase() || 'U'}</span>
+                            <div className="px-3 py-2.5 border-b border-warmMid/10 bg-gradient-to-r from-gold/10 to-coral/10">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center ring-2 ring-white/60 flex-shrink-0">
+                                  <span className="font-serif text-sm text-white font-semibold">{currentUser?.name?.[0]?.toUpperCase() || 'U'}</span>
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-serif text-lg text-warmDark truncate font-medium">
+                                  <p className="font-serif text-base text-warmDark truncate font-medium">
                                     {currentUser?.name || 'User'}
                                   </p>
-                                  <p className="font-sans text-xs text-warmDark/55 truncate">
+                                  <p className="font-sans text-[11px] text-warmDark/55 truncate">
                                     {currentUser?.email || 'user@example.com'}
                                   </p>
                                 </div>
@@ -444,17 +444,17 @@ export default function SpaceSelector() {
                             </div>
 
                             {/* Menu Items */}
-                            <div className="py-2">
+                            <div className="py-1">
                               {pendingInvites.length > 0 && (
                                 <button
                                   onClick={() => setShowInvites(true)}
-                                  className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                                  className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
                                 >
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
-                                    <Mail className="w-4 h-4 text-amber-600/80" />
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <Mail className="w-3 h-3 text-amber-600/80" />
                                   </div>
                                   <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark flex-1">Space invitations</span>
-                                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-coral/80 to-red-400/80 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
+                                  <span className="w-4.5 h-4.5 rounded-full bg-gradient-to-br from-coral/80 to-red-400/80 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
                                     {pendingInvites.length}
                                   </span>
                                 </button>
@@ -470,13 +470,13 @@ export default function SpaceSelector() {
                                     }
                                     setShowProfileMenu(false)
                                   }}
-                                  className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                                  className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
                                 >
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center flex-shrink-0">
-                                    <UserPlus className="w-4 h-4 text-amber-600/80" />
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center flex-shrink-0">
+                                    <UserPlus className="w-3 h-3 text-amber-600/80" />
                                   </div>
                                   <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark flex-1">Join requests</span>
-                                  <span className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
+                                  <span className="w-4.5 h-4.5 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
                                     {totalJoinRequests}
                                   </span>
                                 </button>
@@ -487,10 +487,10 @@ export default function SpaceSelector() {
                                   setModal('join')
                                   setShowProfileMenu(false)
                                 }}
-                                className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                                className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
                               >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal/20 to-emerald-100 flex items-center justify-center flex-shrink-0">
-                                  <Users className="w-4 h-4 text-teal/80" />
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-teal/20 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                                  <Users className="w-3 h-3 text-teal/80" />
                                 </div>
                                 <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Join a group</span>
                               </button>
@@ -501,10 +501,10 @@ export default function SpaceSelector() {
                                     setModal('manage-spaces')
                                     setShowProfileMenu(false)
                                   }}
-                                  className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                                  className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
                                 >
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center flex-shrink-0">
-                                    <Pencil className="w-4 h-4 text-gold/80" />
+                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center flex-shrink-0">
+                                    <Pencil className="w-3 h-3 text-gold/80" />
                                   </div>
                                   <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Manage spaces</span>
                                 </button>
@@ -521,25 +521,25 @@ export default function SpaceSelector() {
                                   setModal('profile')
                                   setShowProfileMenu(false)
                                 }}
-                                className="w-full text-left px-4 py-3 mx-1 my-0.5 rounded-xl hover:bg-gold/8 transition-all flex items-center gap-3 group"
+                                className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
                               >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center flex-shrink-0">
-                                  <User className="w-4 h-4 text-cyan-600/80" />
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center flex-shrink-0">
+                                  <User className="w-3 h-3 text-cyan-600/80" />
                                 </div>
                                 <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Profile</span>
                               </button>
                             </div>
 
-                            <div className="border-t border-warmMid/10 p-2">
+                            <div className="border-t border-warmMid/10 p-1.5">
                               <button
                                 onClick={() => {
                                   setShowProfileMenu(false)
                                   logout()
                                 }}
-                                className="w-full text-left px-4 py-3 rounded-xl hover:bg-coral/8 transition-all flex items-center gap-3 group"
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-coral/8 transition-all flex items-center gap-2 group"
                               >
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-coral/15 to-red-100 flex items-center justify-center flex-shrink-0">
-                                  <LogOut className="w-4 h-4 text-coral/70" />
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-coral/15 to-red-100 flex items-center justify-center flex-shrink-0">
+                                  <LogOut className="w-3 h-3 text-coral/70" />
                                 </div>
                                 <span className="font-sans text-sm text-coral/75 group-hover:text-coral font-medium">Sign out</span>
                               </button>
@@ -850,7 +850,7 @@ export default function SpaceSelector() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 60 }}
               transition={{ type: 'spring', stiffness: 200, damping: 22 }}
-              className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-full bg-white/90 backdrop-blur-xl shadow-2xl border border-white/60"
+              className="fixed bottom-8 bottom-safe left-4 right-4 z-40 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-white/90 backdrop-blur-xl shadow-2xl border border-white/60"
             >
               <button
                 onClick={() => {
@@ -885,7 +885,7 @@ export default function SpaceSelector() {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => setModal('create')}
-          className="fixed bottom-8 right-8 z-30 flex items-center gap-2 px-5 py-3.5 rounded-full bg-gradient-to-r from-gold/90 to-coral/90 text-white shadow-lg hover:shadow-xl transition-shadow"
+          className="fixed bottom-8 bottom-safe right-8 z-30 flex items-center gap-2 px-5 py-3.5 rounded-full bg-gradient-to-r from-gold/90 to-coral/90 text-white shadow-lg hover:shadow-xl transition-shadow"
         >
           <Plus className="w-5 h-5" />
           <span className="font-sans font-medium text-sm">New Space</span>

@@ -101,7 +101,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
   }, [])
 
   // Restore saved range, then apply execCommand
-  const applyFormat = (e: React.MouseEvent, cmd: string) => {
+  const applyFormat = (e: React.MouseEvent | React.TouchEvent, cmd: string) => {
     e.preventDefault()
     e.stopPropagation()
 
@@ -122,7 +122,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
     setTimeout(saveRange, 0)
   }
 
-  const insertEmoji = (e: React.MouseEvent, emoji: string) => {
+  const insertEmoji = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent, emoji: string) => {
     e.preventDefault()
     editorRef.current?.focus()
     if (savedRange.current) {
@@ -160,7 +160,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
       <div className="flex flex-wrap items-center gap-1 mb-1.5 bg-white/50 rounded-xl px-2.5 py-1.5 border border-warmMid/10">
         <button
           type="button"
-          onMouseDown={(e) => { e.preventDefault(); setShowEmojis(v => !v) }}
+          onPointerDown={(e) => { e.preventDefault(); setShowEmojis(v => !v) }}
           className={`${fmtBtn(showEmojis)} w-8 text-base`}
           title="Emoji"
         >😊</button>
@@ -168,11 +168,13 @@ export default function RichTextEditor({ value, onChange, placeholder, className
 
       {/* ── Emoji picker ── */}
       {showEmojis && (
-        <div className="absolute top-12 left-0 z-50 bg-white/98 backdrop-blur-sm rounded-2xl shadow-xl border border-warmMid/15 w-80">
+        <div
+          onPointerDown={(e) => e.preventDefault()}
+          className="absolute top-12 left-0 z-50 bg-white/98 backdrop-blur-sm rounded-2xl shadow-xl border border-warmMid/15 w-80">
           <div className="flex overflow-x-auto gap-0.5 px-2 pt-2 pb-1 border-b border-warmMid/10" style={{ scrollbarWidth: 'none' }}>
             {Object.keys(EMOJI_CATEGORIES).map((cat) => (
               <button key={cat} type="button"
-                onMouseDown={(e) => { e.preventDefault(); setEmojiTab(cat) }}
+                onPointerDown={(e) => { e.preventDefault(); setEmojiTab(cat) }}
                 className={`flex-shrink-0 px-2 py-1 rounded-lg text-xs transition-colors ${
                   emojiTab === cat ? 'bg-gold/20 text-warmDark font-medium' : 'text-warmDark/50 hover:bg-warmMid/10'
                 }`}>{cat}</button>
@@ -181,7 +183,7 @@ export default function RichTextEditor({ value, onChange, placeholder, className
           <div className="grid grid-cols-10 gap-0.5 p-2 max-h-44 overflow-y-auto">
             {(EMOJI_CATEGORIES[emojiTab] || []).map((emoji) => (
               <button key={emoji} type="button"
-                onMouseDown={(e) => insertEmoji(e, emoji)}
+                onPointerDown={(e) => insertEmoji(e, emoji)}
                 className="w-7 h-7 flex items-center justify-center hover:bg-warmMid/15 rounded-lg text-lg leading-none">{emoji}</button>
             ))}
           </div>

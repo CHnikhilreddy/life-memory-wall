@@ -14,7 +14,7 @@ export default function FloatingNav({ onCreateClick, onHomeClick }: Props) {
       initial={{ y: 100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.5, type: 'spring', stiffness: 100 }}
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40"
+      className="fixed bottom-6 fixed-safe-bottom left-1/2 -translate-x-1/2 z-40"
     >
       <motion.button
         onClick={onCreateClick}

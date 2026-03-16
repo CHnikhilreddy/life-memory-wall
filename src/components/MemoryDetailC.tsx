@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, Plus, Image, BookOpen, Camera, Images, Upload, Loader2, X, ChevronLeft, ChevronRight, Pencil, Trash2, Check, MoreVertical, Play, Pause, Crop } from 'lucide-react'
+import { MapPin, Plus, Image, BookOpen, Camera, Images, Upload, Loader2, X, ChevronLeft, ChevronRight, Pencil, Trash2, Check, MoreVertical, Play, Pause, Crop, ArrowLeft } from 'lucide-react'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 
 import { Memory, SubStory, TextStyle, CanvasData } from '../types'
@@ -10,6 +10,11 @@ import ImageCropper from './ImageCropper'
 import TextStylePanel from './TextStylePanel'
 import MomentEditor, { CanvasRenderer } from './MomentEditor'
 
+interface MemberInfo {
+  userId: string
+  name: string
+}
+
 interface Props {
   memory: Memory
   onClose: () => void
@@ -18,6 +23,7 @@ interface Props {
   onDeleteSubstory: (memoryId: string, substoryId: string) => void
   canEdit?: boolean
   onEditingChange?: (editing: boolean) => void
+  members?: MemberInfo[]
 }
 
 const formatDate = (dateStr: string) =>
@@ -71,7 +77,7 @@ function textStyleToCss(ts?: TextStyle): React.CSSProperties {
   }
 }
 
-export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdateSubstory, onDeleteSubstory, canEdit = true, onEditingChange }: Props) {
+export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdateSubstory, onDeleteSubstory, canEdit = true, onEditingChange, members = [] }: Props) {
   const [activeTab, setActiveTab] = useState<'timeline' | 'photos'>('timeline')
 
   /* ── Per-card editing state ── */
@@ -703,6 +709,14 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
         <div ref={coverRef} className="relative flex-shrink-0 h-56 overflow-hidden">
           <img src={mediumUrl(coverPhoto)} alt={memory.title} className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent pointer-events-none" />
+          {/* Back button on cover — mobile only */}
+          <button
+            onClick={onClose}
+            className="md:hidden absolute top-2 left-3 pt-safe flex items-center gap-1 text-white/80 hover:text-white z-10"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="font-sans text-sm">Timeline</span>
+          </button>
           <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
             <div className="flex items-end justify-between gap-2 mb-1">
               <div className="min-w-0 flex-1">
@@ -752,12 +766,35 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -56, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className={`sticky top-0 z-10 rounded-b-3xl border-b border-warmMid/10 px-5 pb-2.5 ${!coverPhoto ? 'pt-4' : 'pt-3'}`}
+            className="sticky top-0 z-20 rounded-b-3xl border-b border-warmMid/10 px-4 pb-2.5 pt-2 pt-safe"
             style={{ background: 'linear-gradient(-45deg, #f0e6ff, #ffe8d6, #e8f0ff, #fff0e8)', backgroundSize: '400% 400%' }}
           >
+            {/* ── Top toolbar: ← Timeline | members ── */}
+            <div className="flex items-center justify-between mb-1.5 md:hidden">
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1 text-warmDark/60 hover:text-warmDark transition-colors"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="font-sans text-sm">Timeline</span>
+              </button>
+              {members.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="flex -space-x-1">
+                    {members.slice(0, 3).map((m) => (
+                      <div key={m.userId} className="w-5 h-5 rounded-full bg-gradient-to-br from-gold/60 to-coral/50 flex items-center justify-center text-white text-[9px] font-bold ring-1 ring-white/60 flex-shrink-0">
+                        {m.name.charAt(0).toUpperCase()}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-xs font-sans text-warmDark/50">{members.length}</span>
+                </div>
+              )}
+            </div>
+            {/* ── Memory info: title, date, tabs ── */}
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <h2 className="font-serif text-base text-warmDark leading-snug">{memory.title}</h2>
+                <h2 className="font-serif text-base text-warmDark leading-snug line-clamp-1">{memory.title}</h2>
                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="font-handwriting text-sm text-warmDark/70">
                     {formatDateFull(memory.date)}
@@ -770,11 +807,6 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                     </span>
                   )}
                 </div>
-                {memory.story && (
-                  <p className="font-sans text-sm text-warmDark/75 leading-relaxed mt-1 line-clamp-2">
-                    {memory.story}
-                  </p>
-                )}
               </div>
               <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
                 <button
@@ -798,7 +830,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
       </AnimatePresence>
 
       {/* ── Main content ── */}
-      <div className="px-5 py-4">
+      <div className="px-2 md:px-5 py-4">
         <AnimatePresence mode="wait">
           {activeTab === 'timeline' ? (
             <motion.div
@@ -828,16 +860,16 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                 /* Timeline with substory cards */
                 <div className="relative">
                   <div
-                    className="absolute left-[15px] top-4 bottom-4 w-px bg-gradient-to-b from-gold/25 via-coral/15 to-teal/15"
+                    className="absolute left-[7px] md:left-[15px] top-4 bottom-4 w-px bg-gradient-to-b from-gold/25 via-coral/15 to-teal/15"
                   />
 
-                  <div className="space-y-3">
+                  <div className="space-y-1 md:space-y-3">
                     {sortedDates.map((date, dateIdx) => (
                       <div key={date}>
                         {/* Date marker */}
-                        <div className="flex items-center gap-4 mb-5 relative">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center z-10">
-                            <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                        <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-5 relative">
+                          <div className="w-4 h-4 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center z-10 flex-shrink-0">
+                            <div className="w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full bg-white" />
                           </div>
                           <span className="font-handwriting text-xl text-warmDark/75">
                             {formatDate(date)}
@@ -845,7 +877,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                         </div>
 
                         {/* Substory cards */}
-                        <div className="space-y-5 ml-4 pl-8">
+                        <div className="space-y-1 md:space-y-5 ml-1 pl-5 md:ml-4 md:pl-8">
                           {groupedByDate[date].map((sub, idx) => {
                             const isExpanded = expandedId === sub.id
                             return (
@@ -855,7 +887,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: (dateIdx * 0.1) + (idx * 0.06), layout: { duration: 0.3, type: 'spring', stiffness: 300, damping: 30 } }}
-                                className={`relative rounded-2xl p-4 transition-all ${
+                                className={`relative rounded-2xl p-1.5 md:p-4 transition-all ${
                                   isExpanded
                                     ? 'ring-2 ring-gold/40 bg-gold/5 shadow-md'
                                     : 'bg-transparent'
@@ -877,7 +909,7 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
                                 )}
 
                                 {/* Separator */}
-                                {!isExpanded && <div className="h-px bg-warmMid/5 mt-5" />}
+                                {!isExpanded && <div className="h-px bg-warmMid/5 mt-2 md:mt-5" />}
                               </motion.div>
                             )
                           })}
@@ -961,16 +993,16 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5, type: 'spring', stiffness: 100 }}
-          className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3"
+          className="fixed bottom-3 bottom-safe right-4 z-40 flex flex-col items-end gap-2"
         >
           {(substories.length > 0 || coverPhoto) && (
             <motion.button
               onClick={startSlideshow}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="relative flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-white/90 backdrop-blur shadow-lg border border-warmMid/15 text-warmDark/70 hover:text-warmDark transition-colors font-handwriting text-xl"
+              className="relative flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/90 backdrop-blur shadow-md border border-warmMid/15 text-warmDark/70 hover:text-warmDark transition-colors font-handwriting text-base"
             >
-              <Play className="w-4 h-4 ml-0.5" />
+              <Play className="w-3.5 h-3.5 ml-0.5" />
               <span>Relive</span>
             </motion.button>
           )}
@@ -979,9 +1011,9 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
               onClick={startAdd}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="relative flex items-center gap-2 px-5 py-3 rounded-full bg-gradient-to-r from-gold to-coral text-white shadow-lg font-sans text-sm font-medium"
+              className="relative flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-gold to-coral text-white shadow-md font-sans text-xs font-medium"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-4 h-4" />
               <span>New moment</span>
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gold/50 to-coral/50 blur-md -z-10" />
             </motion.button>

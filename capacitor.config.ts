@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.myinnercircle.app',
   appName: 'My Inner Circle',
   webDir: 'dist',
+  server: {
+    iosScheme: 'https',
+  },
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,

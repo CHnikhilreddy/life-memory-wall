@@ -21,14 +21,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   if (!isNative) return <>{children}</>
 
   return (
-    <div
-      className="safe-top safe-bottom overflow-x-hidden overflow-y-auto"
-      style={{
-        height: '100%',
-        WebkitOverflowScrolling: 'touch',
-        overscrollBehavior: 'none',
-      }}
-    >
+    <div className="safe-bottom">
       {children}
     </div>
   )
