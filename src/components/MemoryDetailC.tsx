@@ -993,16 +993,16 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5, type: 'spring', stiffness: 100 }}
-          className="fixed bottom-3 bottom-safe right-4 z-40 flex flex-col items-end gap-2"
+          className="fixed bottom-3 bottom-safe right-4 z-40 flex flex-col items-end gap-2 md:bottom-6 md:right-6 md:gap-3"
         >
           {(substories.length > 0 || coverPhoto) && (
             <motion.button
               onClick={startSlideshow}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="relative flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/90 backdrop-blur shadow-md border border-warmMid/15 text-warmDark/70 hover:text-warmDark transition-colors font-handwriting text-base"
+              className="relative flex items-center gap-1.5 md:gap-2.5 px-4 py-2 md:px-6 md:py-3.5 rounded-full bg-white/90 backdrop-blur shadow-md border border-warmMid/15 text-warmDark/70 hover:text-warmDark transition-colors font-handwriting text-base md:text-xl"
             >
-              <Play className="w-3.5 h-3.5 ml-0.5" />
+              <Play className="w-3.5 h-3.5 md:w-4 md:h-4 ml-0.5" />
               <span>Relive</span>
             </motion.button>
           )}
@@ -1011,9 +1011,9 @@ export default function MemoryDetailC({ memory, onClose, onAddSubstory, onUpdate
               onClick={startAdd}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              className="relative flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-gold to-coral text-white shadow-md font-sans text-xs font-medium"
+              className="relative flex items-center gap-1.5 md:gap-2 px-4 py-2 md:px-5 md:py-3 rounded-full bg-gradient-to-r from-gold to-coral text-white shadow-md font-sans text-xs md:text-sm font-medium"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 md:w-5 md:h-5" />
               <span>New moment</span>
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-gold/50 to-coral/50 blur-md -z-10" />
             </motion.button>
