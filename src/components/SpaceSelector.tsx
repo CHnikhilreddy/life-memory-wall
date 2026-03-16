@@ -12,6 +12,7 @@ import {
 import { validatePassword } from '../utils/validation'
 import { MemorySpace } from '../types'
 import ParticleBackground from './ParticleBackground'
+import ImageCropModal from './ImageCropModal'
 
 const defaultSpaceColors = [
   'from-purple-200/60 to-pink-200/60',
@@ -42,7 +43,7 @@ const spacePageSubheadings = [
 ]
 
 export default function SpaceSelector() {
-  const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, leaveSpace, removeMember, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite } = useStore()
+  const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, leaveSpace, removeMember, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite, hiddenSpaceIds: storeHiddenSpaceIds, hasVaultCode, setVaultCode: storeSetVaultCode, changeVaultCode: storeChangeVaultCode, verifyVaultCode: storeVerifyVaultCode, updateHiddenSpaces: storeUpdateHiddenSpaces } = useStore()
   const allSpaces = getVisibleSpaces()
   const totalJoinRequests = spaces.reduce((sum, s) => s.createdBy === currentUser?.id ? sum + (s.joinRequests?.length || 0) : sum, 0)
   const totalNotifications = pendingInvites.length + totalJoinRequests
@@ -58,7 +59,18 @@ export default function SpaceSelector() {
   const [newType, setNewType] = useState<'personal' | 'group'>('personal')
   const [createStep, setCreateStep] = useState<'type' | 'design' | 'invite'>('type')
   const [newCoverImage, setNewCoverImage] = useState('')
+  const [newCoverImagePosX, setNewCoverImagePosX] = useState(50)
+  const [newCoverImagePosY, setNewCoverImagePosY] = useState(50)
+  const [newCoverImageScale, setNewCoverImageScale] = useState(1)
   const [coverImageUploading, setCoverImageUploading] = useState(false)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
+  const [cropTarget, setCropTarget] = useState<'create' | 'edit' | null>(null)
+  const [cropIsReadjust, setCropIsReadjust] = useState(false)
+  const [cropPendingFile, setCropPendingFile] = useState<File | null>(null)
+  const [cropInitialPosX, setCropInitialPosX] = useState(50)
+  const [cropInitialPosY, setCropInitialPosY] = useState(50)
+  const [cropInitialScale, setCropInitialScale] = useState(1)
+  const [cropUploading, setCropUploading] = useState(false)
   const [createdSpaceId, setCreatedSpaceId] = useState<string | null>(null)
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null)
   const [viewingSpaceId, setViewingSpaceId] = useState<string | null>(null)
@@ -88,6 +100,9 @@ export default function SpaceSelector() {
   const [editColor, setEditColor] = useState('purple-pink')
   const [editDescription, setEditDescription] = useState('')
   const [editCoverImage, setEditCoverImage] = useState('')
+  const [editCoverImagePosX, setEditCoverImagePosX] = useState(50)
+  const [editCoverImagePosY, setEditCoverImagePosY] = useState(50)
+  const [editCoverImageScale, setEditCoverImageScale] = useState(1)
   const [editCoverImageUploading, setEditCoverImageUploading] = useState(false)
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
   const [deleteConfirmSpace, setDeleteConfirmSpace] = useState<MemorySpace | null>(null)
@@ -135,15 +150,9 @@ export default function SpaceSelector() {
   const [selectedCategory, setSelectedCategory] = useState<string>(iconCategories[0])
 
   // Hidden Spaces / Secret Vault
+  const hiddenSpaceIds = new Set(storeHiddenSpaceIds)
   const [hideSelectMode, setHideSelectMode] = useState(false)
   const [selectedToHide, setSelectedToHide] = useState<Set<string>>(new Set())
-  const [hiddenSpaceIds, setHiddenSpaceIds] = useState<Set<string>>(() => {
-    try {
-      const stored = localStorage.getItem('hiddenSpaceIds')
-      return stored ? new Set(JSON.parse(stored)) : new Set()
-    } catch { return new Set() }
-  })
-  const [secretCode, setSecretCode] = useState<string>(() => localStorage.getItem('spacesSecretCode') || '')
   const [vaultOpen, setVaultOpen] = useState(false)
   const [vaultPinInput, setVaultPinInput] = useState('')
   const [vaultPinError, setVaultPinError] = useState('')
@@ -166,14 +175,12 @@ export default function SpaceSelector() {
     : allSpaces.filter((s) => !hiddenSpaceIds.has(s.id))
 
   const handleDoneHiding = () => {
-    if (selectedToHide.size > 0 && !secretCode) {
+    if (selectedToHide.size > 0 && !hasVaultCode) {
       setPendingHideAfterCode(true)
       setModal('set-secret-code')
       return
     }
-    const newHidden = new Set(selectedToHide)
-    localStorage.setItem('hiddenSpaceIds', JSON.stringify(Array.from(newHidden)))
-    setHiddenSpaceIds(newHidden)
+    storeUpdateHiddenSpaces(Array.from(selectedToHide))
     setSelectedToHide(new Set())
     setHideSelectMode(false)
     setVaultOpen(false)
@@ -192,6 +199,9 @@ export default function SpaceSelector() {
       id: `space-${Date.now()}`,
       title: newTitle,
       coverImage: newCoverImage,
+      coverImageOffsetX: newCoverImagePosX,
+      coverImageOffsetY: newCoverImagePosY,
+      coverImageScale: newCoverImageScale,
       coverEmoji: '✨',
       coverIcon: iconId,
       coverColor: newColor,
@@ -210,6 +220,9 @@ export default function SpaceSelector() {
       setNewIconVariation(0)
       setNewColor('purple-pink')
       setNewCoverImage('')
+      setNewCoverImagePosX(50)
+      setNewCoverImagePosY(50)
+      setNewCoverImageScale(1)
       setNewDescription(randomTaglineForIcon('couple'))
       if (newType === 'group' && created?.id) {
         setCreatedSpaceId(created.id)
@@ -228,6 +241,9 @@ export default function SpaceSelector() {
     setEditingSpaceId(space.id)
     setEditTitle(space.title)
     setEditCoverImage(space.coverImage || '')
+    setEditCoverImagePosX(space.coverImageOffsetX ?? 50)
+    setEditCoverImagePosY(space.coverImageOffsetY ?? 50)
+    setEditCoverImageScale(space.coverImageScale ?? 1)
     if (space.coverIcon) {
       const base = space.coverIcon.replace(/-[0-2]$/, '')
       const variation = getIconVariation(space.coverIcon)
@@ -250,7 +266,7 @@ export default function SpaceSelector() {
     }
     setEditError('')
     const iconId = makeIconId(editIcon, editIconVariation)
-    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage || undefined, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
+    await updateSpace(editingSpaceId, { title: editTitle.trim(), coverImage: editCoverImage || undefined, coverImageOffsetX: editCoverImagePosX, coverImageOffsetY: editCoverImagePosY, coverImageScale: editCoverImageScale, coverIcon: editCoverImage ? '' : iconId, coverColor: editColor, description: editDescription.trim() || undefined })
     setModal('none'); setEditingSpaceId(null); setEditPageMode(false)
   }
 
@@ -724,7 +740,14 @@ export default function SpaceSelector() {
                       ${isHidden && vaultOpen ? 'opacity-70' : ''}
                       ${space.coverImage ? '' : `bg-gradient-to-br ${space.coverColor ? getColorClasses(space.coverColor) : defaultSpaceColors[i % defaultSpaceColors.length]} flex items-center justify-center`}`}>
                       {space.coverImage ? (
-                        <img src={space.coverImage} alt={space.title} className="w-full h-full object-cover" />
+                        <div className="w-full h-full" style={{
+                          backgroundImage: `url(${space.coverImage})`,
+                          backgroundSize: 'cover',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: `${space.coverImageOffsetX ?? 50}% ${space.coverImageOffsetY ?? 50}%`,
+                          transform: `scale(${space.coverImageScale ?? 1})`,
+                          transformOrigin: `${space.coverImageOffsetX ?? 50}% ${space.coverImageOffsetY ?? 50}%`,
+                        }} />
                       ) : (
                         <>
                           <div className={`absolute inset-0 bg-white/20 transition-opacity duration-500 ${!editPageMode ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'}`} />
@@ -737,7 +760,7 @@ export default function SpaceSelector() {
                       )}
                       {/* Hide select mode: dim overlay + check */}
                       {hideSelectMode && (
-                        <div className={`absolute inset-0 flex items-center justify-center transition-all duration-200 ${isChecked ? 'bg-warmDark/50' : 'bg-warmDark/10'}`}>
+                        <div className={`absolute inset-0 z-20 flex items-center justify-center transition-all duration-200 ${isChecked ? 'bg-warmDark/50' : 'bg-warmDark/10'}`}>
                           <div className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all ${isChecked ? 'bg-white border-white' : 'border-white/70'}`}>
                             {isChecked && <Check className="w-5 h-5 text-warmDark" />}
                           </div>
@@ -949,7 +972,14 @@ export default function SpaceSelector() {
                         <div className={`w-28 h-28 rounded-full border border-white/50 shadow-lg overflow-hidden flex items-center justify-center
                           ${newCoverImage ? '' : `bg-gradient-to-br ${getColorClasses(newColor)}`}`}>
                           {newCoverImage ? (
-                            <img src={newCoverImage} alt="cover" className="w-full h-full object-cover" />
+                            <div className="w-full h-full" style={{
+                              backgroundImage: `url(${newCoverImage})`,
+                              backgroundSize: 'cover',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: `${newCoverImagePosX}% ${newCoverImagePosY}%`,
+                              transform: `scale(${newCoverImageScale})`,
+                              transformOrigin: `${newCoverImagePosX}% ${newCoverImagePosY}%`,
+                            }} />
                           ) : (
                             <SpaceIconRenderer iconId={makeIconId(newIcon, newIconVariation)} size="full" />
                           )}
@@ -966,30 +996,38 @@ export default function SpaceSelector() {
                         {!newCoverImage && (
                           <label className="absolute bottom-1 right-1 z-10 w-8 h-8 rounded-full bg-warmDark/70 text-white flex items-center justify-center cursor-pointer hover:bg-warmDark transition-colors shadow-md">
                             {coverImageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                               const file = e.target.files?.[0]
                               if (!file) return
-                              setCoverImageUploading(true)
-                              try {
-                                const url = await uploadImage(file)
-                                setNewCoverImage(url)
-                              } catch {
-                                // silently fail
-                              } finally {
-                                setCoverImageUploading(false)
-                                e.target.value = ''
-                              }
+                              setCropSrc(URL.createObjectURL(file))
+                              setCropTarget('create')
+                              setCropIsReadjust(false)
+                              setCropPendingFile(file)
+                              setCropInitialPosX(50)
+                              setCropInitialPosY(50)
+                              setCropInitialScale(1)
+                              e.target.value = ''
                             }} />
                           </label>
                         )}
                         {newCoverImage && (
-                          <button
-                            type="button"
-                            onClick={() => setNewCoverImage('')}
-                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-warmDark/70 text-white flex items-center justify-center hover:bg-warmDark transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setNewCoverImage('')}
+                              className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-warmDark/70 text-white flex items-center justify-center hover:bg-warmDark transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setCropSrc(newCoverImage); setCropTarget('create'); setCropIsReadjust(true); setCropInitialPosX(newCoverImagePosX); setCropInitialPosY(newCoverImagePosY); setCropInitialScale(newCoverImageScale) }}
+                              className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gold/80 text-white flex items-center justify-center hover:bg-gold transition-colors text-xs font-bold"
+                              title="Adjust crop"
+                            >
+                              ⌖
+                            </button>
+                          </>
                         )}
                       </div>
                       <p className="text-xs font-sans text-warmDark/50">Tap the camera to upload a photo</p>
@@ -1123,7 +1161,14 @@ export default function SpaceSelector() {
                         <div className={`w-28 h-28 rounded-full border border-white/50 shadow-lg overflow-hidden flex items-center justify-center
                           ${editCoverImage ? '' : `bg-gradient-to-br ${getColorClasses(editColor)}`}`}>
                           {editCoverImage ? (
-                            <img src={editCoverImage} alt="cover" className="w-full h-full object-cover" />
+                            <div className="w-full h-full" style={{
+                              backgroundImage: `url(${editCoverImage})`,
+                              backgroundSize: 'cover',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: `${editCoverImagePosX}% ${editCoverImagePosY}%`,
+                              transform: `scale(${editCoverImageScale})`,
+                              transformOrigin: `${editCoverImagePosX}% ${editCoverImagePosY}%`,
+                            }} />
                           ) : (
                             <SpaceIconRenderer iconId={makeIconId(editIcon, editIconVariation)} size="full" />
                           )}
@@ -1139,30 +1184,38 @@ export default function SpaceSelector() {
                         {!editCoverImage && (
                           <label className="absolute bottom-1 right-1 z-10 w-8 h-8 rounded-full bg-warmDark/70 text-white flex items-center justify-center cursor-pointer hover:bg-warmDark transition-colors shadow-md">
                             {editCoverImageUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />}
-                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                               const file = e.target.files?.[0]
                               if (!file) return
-                              setEditCoverImageUploading(true)
-                              try {
-                                const url = await uploadImage(file)
-                                setEditCoverImage(url)
-                              } catch {
-                                // silently fail
-                              } finally {
-                                setEditCoverImageUploading(false)
-                                e.target.value = ''
-                              }
+                              setCropSrc(URL.createObjectURL(file))
+                              setCropTarget('edit')
+                              setCropIsReadjust(false)
+                              setCropPendingFile(file)
+                              setCropInitialPosX(50)
+                              setCropInitialPosY(50)
+                              setCropInitialScale(1)
+                              e.target.value = ''
                             }} />
                           </label>
                         )}
                         {editCoverImage && (
-                          <button
-                            type="button"
-                            onClick={() => setEditCoverImage('')}
-                            className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-warmDark/70 text-white flex items-center justify-center hover:bg-warmDark transition-colors"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setEditCoverImage('')}
+                              className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-warmDark/70 text-white flex items-center justify-center hover:bg-warmDark transition-colors"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setCropSrc(editCoverImage); setCropTarget('edit'); setCropIsReadjust(true); setCropInitialPosX(editCoverImagePosX); setCropInitialPosY(editCoverImagePosY); setCropInitialScale(editCoverImageScale) }}
+                              className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gold/80 text-white flex items-center justify-center hover:bg-gold transition-colors text-xs font-bold"
+                              title="Adjust crop"
+                            >
+                              ⌖
+                            </button>
+                          </>
                         )}
                       </div>
                       <p className="text-xs font-sans text-warmDark/50">Tap the camera to change photo</p>
@@ -1424,14 +1477,14 @@ export default function SpaceSelector() {
                   )}
 
                   {/* Secret Vault entry — only shown when a code is set or hidden spaces exist */}
-                  {(secretCode || hiddenSpaceIds.size > 0) && profileTab !== 'code' && (
+                  {(hasVaultCode || hiddenSpaceIds.size > 0) && profileTab !== 'code' && (
                     <div className="mt-5 pt-4 border-t border-warmMid/10">
                       <button
                         onClick={() => {
                           if (vaultOpen) {
                             setVaultOpen(false)
                             closeModal()
-                          } else if (secretCode) {
+                          } else if (hasVaultCode) {
                             setVaultPinInput('')
                             setVaultPinError('')
                             setModal('unlock-vault')
@@ -1466,9 +1519,9 @@ export default function SpaceSelector() {
                   {profileTab === 'code' && (
                     <div className="space-y-4">
                       <p className="font-handwriting text-warmDark/60 text-center text-lg">
-                        {secretCode ? 'Change the code that protects your hidden spaces' : 'Set a 4-digit code to lock your secret vault'}
+                        {hasVaultCode ? 'Change the code that protects your hidden spaces' : 'Set a 4-digit code to lock your secret vault'}
                       </p>
-                      {secretCode && (
+                      {hasVaultCode && (
                         <div>
                           <label className="font-handwriting text-warmDark/70 text-base block mb-2 text-center">Current code</label>
                           <div className="flex gap-3 justify-center">
@@ -1489,11 +1542,11 @@ export default function SpaceSelector() {
                         </div>
                       )}
                       <div>
-                        <label className="font-handwriting text-warmDark/70 text-base block mb-2 text-center">{secretCode ? 'New code' : 'Your code'}</label>
+                        <label className="font-handwriting text-warmDark/70 text-base block mb-2 text-center">{hasVaultCode ? 'New code' : 'Your code'}</label>
                         <div className="flex gap-3 justify-center">
                           {[0, 1, 2, 3].map((idx) => (
                             <input key={idx} id={`pc-new-${idx}`} type="password" inputMode="numeric" maxLength={1}
-                              value={newSecretCode[idx] || ''} autoFocus={!secretCode && idx === 0}
+                              value={newSecretCode[idx] || ''} autoFocus={!hasVaultCode && idx === 0}
                               onChange={(e) => {
                                 const val = e.target.value.replace(/\D/, ''); if (!val) return
                                 const arr = (newSecretCode + '    ').split('').slice(0, 4); arr[idx] = val
@@ -1540,20 +1593,31 @@ export default function SpaceSelector() {
                       <div className="flex gap-3 pt-1">
                         <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
                         <button
-                          onClick={() => {
+                          onClick={async () => {
                             const cleanNew = newSecretCode.replace(/\s/g, '')
                             const cleanConfirm = confirmSecretCode.replace(/\s/g, '')
-                            if (secretCode) {
-                              const cleanCurrent = currentSecretCodeInput.replace(/\s/g, '')
-                              if (cleanCurrent.length !== 4) { setSecretCodeError('Enter your current 4-digit code'); return }
-                              if (cleanCurrent !== secretCode) { setSecretCodeError('Current code is incorrect'); return }
-                            }
                             if (cleanNew.length !== 4) { setSecretCodeError('Must be exactly 4 digits'); return }
                             if (cleanNew !== cleanConfirm) { setSecretCodeError('Codes do not match'); return }
-                            localStorage.setItem('spacesSecretCode', cleanNew)
-                            setSecretCode(cleanNew)
-                            setSecretCodeSuccess(true)
-                            setTimeout(() => closeModal(), 1200)
+                            try {
+                              if (hasVaultCode) {
+                                const cleanCurrent = currentSecretCodeInput.replace(/\s/g, '')
+                                if (cleanCurrent.length !== 4) { setSecretCodeError('Enter your current 4-digit code'); return }
+                                await storeChangeVaultCode(cleanCurrent, cleanNew)
+                              } else {
+                                await storeSetVaultCode(cleanNew)
+                              }
+                              // If pending hide, complete it now
+                              if (pendingHideAfterCode) {
+                                await storeUpdateHiddenSpaces(Array.from(selectedToHide))
+                                setSelectedToHide(new Set())
+                                setHideSelectMode(false)
+                                setPendingHideAfterCode(false)
+                              }
+                              setSecretCodeSuccess(true)
+                              setTimeout(() => closeModal(), 1200)
+                            } catch (err: any) {
+                              setSecretCodeError(err.message || 'Failed to save code')
+                            }
                           }}
                           disabled={secretCodeSuccess}
                           className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm"
@@ -2011,14 +2075,16 @@ export default function SpaceSelector() {
                           setVaultPinError('')
                           if (idx < 3) document.getElementById(`vault-pin-${idx + 1}`)?.focus()
                           if (next.length === 4) {
-                            if (next === secretCode) {
-                              setVaultOpen(true)
-                              closeModal()
-                            } else {
-                              setVaultPinError('Incorrect code. Try again.')
-                              setVaultPinInput('')
-                              document.getElementById('vault-pin-0')?.focus()
-                            }
+                            storeVerifyVaultCode(next).then((ok) => {
+                              if (ok) {
+                                setVaultOpen(true)
+                                closeModal()
+                              } else {
+                                setVaultPinError('Incorrect code. Try again.')
+                                setVaultPinInput('')
+                                document.getElementById('vault-pin-0')?.focus()
+                              }
+                            })
                           }
                         }}
                         onKeyDown={(e) => {
@@ -2058,13 +2124,13 @@ export default function SpaceSelector() {
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center mb-3">
                       <Lock className="w-6 h-6 text-gold/80" />
                     </div>
-                    <h2 className="font-serif text-2xl text-warmDark">{secretCode ? 'Change secrecy code' : 'Set secrecy code'}</h2>
+                    <h2 className="font-serif text-2xl text-warmDark">{hasVaultCode ? 'Change secrecy code' : 'Set secrecy code'}</h2>
                     <p className="font-handwriting text-lg text-warmDark/60 mt-1 text-center">
-                      {secretCode ? 'Choose a new 4-digit code for your vault' : 'Create a 4-digit code to protect your hidden spaces'}
+                      {hasVaultCode ? 'Choose a new 4-digit code for your vault' : 'Create a 4-digit code to protect your hidden spaces'}
                     </p>
                   </div>
                   <div className="space-y-4">
-                    {secretCode && (
+                    {hasVaultCode && (
                       <div>
                         <label className="font-handwriting text-warmDark/70 text-base block mb-2">Current code</label>
                         <div className="flex gap-3 justify-center">
@@ -2101,7 +2167,7 @@ export default function SpaceSelector() {
                       </div>
                     )}
                     <div>
-                      <label className="font-handwriting text-warmDark/70 text-base block mb-2">{secretCode ? 'New code' : 'Your code'}</label>
+                      <label className="font-handwriting text-warmDark/70 text-base block mb-2">{hasVaultCode ? 'New code' : 'Your code'}</label>
                       <div className="flex gap-3 justify-center">
                         {[0, 1, 2, 3].map((idx) => (
                           <input
@@ -2111,7 +2177,7 @@ export default function SpaceSelector() {
                             inputMode="numeric"
                             maxLength={1}
                             value={newSecretCode[idx] || ''}
-                            autoFocus={!secretCode && idx === 0}
+                            autoFocus={!hasVaultCode && idx === 0}
                             onChange={(e) => {
                               const val = e.target.value.replace(/\D/, '')
                               if (!val) return
@@ -2185,29 +2251,35 @@ export default function SpaceSelector() {
                     <div className="flex gap-3 pt-2">
                       <button onClick={() => { closeModal(); if (pendingHideAfterCode) { setPendingHideAfterCode(false); setHideSelectMode(false); setSelectedToHide(new Set()) } }} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all">Cancel</button>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const cleanNew = newSecretCode.replace(/\s/g, '')
                           const cleanConfirm = confirmSecretCode.replace(/\s/g, '')
-                          if (secretCode) {
+                          if (hasVaultCode) {
                             const cleanCurrent = currentSecretCodeInput.replace(/\s/g, '')
                             if (cleanCurrent.length !== 4) { setSecretCodeError('Enter your current 4-digit code'); return }
-                            if (cleanCurrent !== secretCode) { setSecretCodeError('Current code is incorrect'); return }
+                            const valid = await storeVerifyVaultCode(cleanCurrent)
+                            if (!valid) { setSecretCodeError('Current code is incorrect'); return }
                           }
                           if (cleanNew.length !== 4) { setSecretCodeError('New code must be exactly 4 digits'); return }
                           if (cleanNew !== cleanConfirm) { setSecretCodeError('Codes do not match'); return }
-                          localStorage.setItem('spacesSecretCode', cleanNew)
-                          setSecretCode(cleanNew)
-                          setSecretCodeSuccess(true)
-                          // If pending hide, complete it now
-                          if (pendingHideAfterCode) {
-                            const newHidden = new Set(selectedToHide)
-                            localStorage.setItem('hiddenSpaceIds', JSON.stringify(Array.from(newHidden)))
-                            setHiddenSpaceIds(newHidden)
-                            setSelectedToHide(new Set())
-                            setHideSelectMode(false)
-                            setPendingHideAfterCode(false)
+                          try {
+                            if (hasVaultCode) {
+                              await storeChangeVaultCode(currentSecretCodeInput.replace(/\s/g, ''), cleanNew)
+                            } else {
+                              await storeSetVaultCode(cleanNew)
+                            }
+                            setSecretCodeSuccess(true)
+                            // If pending hide, complete it now
+                            if (pendingHideAfterCode) {
+                              await storeUpdateHiddenSpaces(Array.from(selectedToHide))
+                              setSelectedToHide(new Set())
+                              setHideSelectMode(false)
+                              setPendingHideAfterCode(false)
+                            }
+                            setTimeout(() => closeModal(), 1200)
+                          } catch {
+                            setSecretCodeError('Failed to save code. Please try again.')
                           }
-                          setTimeout(() => closeModal(), 1200)
                         }}
                         disabled={secretCodeSuccess}
                         className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2"
@@ -2220,6 +2292,42 @@ export default function SpaceSelector() {
               )}
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* IMAGE CROP MODAL */}
+      <AnimatePresence>
+        {cropSrc && (
+          <ImageCropModal
+            src={cropSrc}
+            initialPosX={cropInitialPosX}
+            initialPosY={cropInitialPosY}
+            initialScale={cropInitialScale}
+            uploading={cropUploading}
+            onCancel={() => {
+              if (!cropIsReadjust) URL.revokeObjectURL(cropSrc)
+              setCropSrc(null); setCropTarget(null); setCropPendingFile(null)
+            }}
+            onDone={async ({ posX, posY, scale }) => {
+              if (cropIsReadjust) {
+                // Re-adjust only: no re-upload, just update position
+                if (cropTarget === 'create') { setNewCoverImagePosX(posX); setNewCoverImagePosY(posY); setNewCoverImageScale(scale) }
+                else { setEditCoverImagePosX(posX); setEditCoverImagePosY(posY); setEditCoverImageScale(scale) }
+                setCropSrc(null); setCropTarget(null)
+              } else {
+                // New upload: upload the original file, then save URL + position
+                setCropUploading(true)
+                try {
+                  const url = await uploadImage(cropPendingFile!)
+                  if (cropTarget === 'create') { setNewCoverImage(url); setNewCoverImagePosX(posX); setNewCoverImagePosY(posY); setNewCoverImageScale(scale) }
+                  else { setEditCoverImage(url); setEditCoverImagePosX(posX); setEditCoverImagePosY(posY); setEditCoverImageScale(scale) }
+                } catch { /* silently fail */ } finally {
+                  URL.revokeObjectURL(cropSrc)
+                  setCropSrc(null); setCropTarget(null); setCropPendingFile(null); setCropUploading(false)
+                }
+              }
+            }}
+          />
         )}
       </AnimatePresence>
 
