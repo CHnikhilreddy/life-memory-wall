@@ -305,7 +305,7 @@ export default function Timeline() {
   const MemoryMembersPanel = (
     <>
       <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false) }} />
-      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-2.5 shadow-xl w-48">
+      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl p-2.5 md:p-3 shadow-xl w-48 md:w-60">
         <p className="font-sans text-xs text-warmDark/50 mb-2">
           {selectedMemory?.visibleTo && selectedMemory.visibleTo.length > 0 ? 'Visible to' : 'Everyone in the space'}
         </p>
@@ -327,8 +327,8 @@ export default function Timeline() {
   const SpaceMembersPanel = (
     <>
       <div className="fixed inset-0 z-40" onClick={() => { setShowMembers(false) }} />
-      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl w-56 shadow-xl max-h-[80vh] overflow-y-auto">
-        <div className="p-3 space-y-3">
+      <div className="absolute right-0 top-9 z-50 bg-white/95 backdrop-blur-md border border-warmMid/15 rounded-2xl w-56 md:w-72 shadow-xl max-h-[80vh] overflow-y-auto">
+        <div className="p-3 space-y-3 md:p-4 md:space-y-4">
           {/* Members list */}
           {renderMembersList(allActiveMembers, true)}
 
@@ -340,8 +340,8 @@ export default function Timeline() {
           {space.inviteCode && (
             <div className="pt-2 border-t border-warmMid/10">
               <p className="font-sans text-xs text-warmDark/50 mb-1">Invite code</p>
-              <div className="flex items-center gap-1.5 bg-white/40 rounded-lg px-2 py-1.5">
-                <span className="font-mono text-xs tracking-[0.12em] text-warmDark font-semibold flex-1 select-all">{space.inviteCode}</span>
+              <div className="flex items-center gap-1.5 md:gap-2 bg-white/40 rounded-lg px-2 py-1.5 md:px-3 md:py-2">
+                <span className="font-mono text-xs md:text-sm tracking-[0.12em] text-warmDark font-semibold flex-1 select-all">{space.inviteCode}</span>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(space.inviteCode || '')

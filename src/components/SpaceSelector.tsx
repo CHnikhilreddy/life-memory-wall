@@ -415,7 +415,7 @@ export default function SpaceSelector() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-14 z-20 w-52 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
+                      className="absolute right-0 top-14 z-20 w-52 md:w-60 bg-white/95 backdrop-blur-xl border border-white/40 rounded-2xl shadow-2xl overflow-hidden"
                     >
                       <AnimatePresence mode="wait">
                         {!showInvites ? (
@@ -427,13 +427,13 @@ export default function SpaceSelector() {
                             transition={{ duration: 0.15 }}
                           >
                             {/* User Info Header */}
-                            <div className="px-3 py-2.5 border-b border-warmMid/10 bg-gradient-to-r from-gold/10 to-coral/10">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center ring-2 ring-white/60 flex-shrink-0">
-                                  <span className="font-serif text-sm text-white font-semibold">{currentUser?.name?.[0]?.toUpperCase() || 'U'}</span>
+                            <div className="px-3 py-2.5 md:px-5 md:py-4 border-b border-warmMid/10 bg-gradient-to-r from-gold/10 to-coral/10">
+                              <div className="flex items-center gap-2 md:gap-3">
+                                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-gold/50 to-coral/50 flex items-center justify-center ring-2 ring-white/60 flex-shrink-0">
+                                  <span className="font-serif text-sm md:text-base text-white font-semibold">{currentUser?.name?.[0]?.toUpperCase() || 'U'}</span>
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-serif text-base text-warmDark truncate font-medium">
+                                  <p className="font-serif text-base md:text-lg text-warmDark truncate font-medium">
                                     {currentUser?.name || 'User'}
                                   </p>
                                   <p className="font-sans text-[11px] text-warmDark/55 truncate">
@@ -444,14 +444,14 @@ export default function SpaceSelector() {
                             </div>
 
                             {/* Menu Items */}
-                            <div className="py-1">
+                            <div className="py-1 md:py-2">
                               {pendingInvites.length > 0 && (
                                 <button
                                   onClick={() => setShowInvites(true)}
-                                  className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
+                                  className="w-full text-left px-3 py-2 mx-0.5 md:px-4 md:py-3 md:mx-1 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 md:gap-3 group"
                                 >
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
-                                    <Mail className="w-3 h-3 text-amber-600/80" />
+                                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <Mail className="w-3 h-3 md:w-4 md:h-4 text-amber-600/80" />
                                   </div>
                                   <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark flex-1">Space invitations</span>
                                   <span className="w-4.5 h-4.5 rounded-full bg-gradient-to-br from-coral/80 to-red-400/80 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
@@ -470,10 +470,10 @@ export default function SpaceSelector() {
                                     }
                                     setShowProfileMenu(false)
                                   }}
-                                  className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
+                                  className="w-full text-left px-3 py-2 mx-0.5 md:px-4 md:py-3 md:mx-1 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 md:gap-3 group"
                                 >
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center flex-shrink-0">
-                                    <UserPlus className="w-3 h-3 text-amber-600/80" />
+                                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-amber-100 to-yellow-100 flex items-center justify-center flex-shrink-0">
+                                    <UserPlus className="w-3 h-3 md:w-4 md:h-4 text-amber-600/80" />
                                   </div>
                                   <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark flex-1">Join requests</span>
                                   <span className="w-4.5 h-4.5 rounded-full bg-gradient-to-br from-amber-400 to-orange-400 text-white text-[9px] font-bold flex items-center justify-center shadow-sm">
@@ -487,10 +487,10 @@ export default function SpaceSelector() {
                                   setModal('join')
                                   setShowProfileMenu(false)
                                 }}
-                                className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
+                                className="w-full text-left px-3 py-2 mx-0.5 md:px-4 md:py-3 md:mx-1 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 md:gap-3 group"
                               >
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-teal/20 to-emerald-100 flex items-center justify-center flex-shrink-0">
-                                  <Users className="w-3 h-3 text-teal/80" />
+                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-teal/20 to-emerald-100 flex items-center justify-center flex-shrink-0">
+                                  <Users className="w-3 h-3 md:w-4 md:h-4 text-teal/80" />
                                 </div>
                                 <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Join a group</span>
                               </button>
@@ -501,10 +501,10 @@ export default function SpaceSelector() {
                                     setModal('manage-spaces')
                                     setShowProfileMenu(false)
                                   }}
-                                  className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
+                                  className="w-full text-left px-3 py-2 mx-0.5 md:px-4 md:py-3 md:mx-1 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 md:gap-3 group"
                                 >
-                                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center flex-shrink-0">
-                                    <Pencil className="w-3 h-3 text-gold/80" />
+                                  <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-gold/20 to-amber-100 flex items-center justify-center flex-shrink-0">
+                                    <Pencil className="w-3 h-3 md:w-4 md:h-4 text-gold/80" />
                                   </div>
                                   <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Manage spaces</span>
                                 </button>
@@ -521,25 +521,25 @@ export default function SpaceSelector() {
                                   setModal('profile')
                                   setShowProfileMenu(false)
                                 }}
-                                className="w-full text-left px-3 py-2 mx-0.5 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 group"
+                                className="w-full text-left px-3 py-2 mx-0.5 md:px-4 md:py-3 md:mx-1 rounded-lg hover:bg-gold/8 transition-all flex items-center gap-2 md:gap-3 group"
                               >
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center flex-shrink-0">
-                                  <User className="w-3 h-3 text-cyan-600/80" />
+                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-cyan-100 to-sky-100 flex items-center justify-center flex-shrink-0">
+                                  <User className="w-3 h-3 md:w-4 md:h-4 text-cyan-600/80" />
                                 </div>
                                 <span className="font-sans text-sm text-warmDark/75 group-hover:text-warmDark">Profile</span>
                               </button>
                             </div>
 
-                            <div className="border-t border-warmMid/10 p-1.5">
+                            <div className="border-t border-warmMid/10 p-1.5 md:p-2">
                               <button
                                 onClick={() => {
                                   setShowProfileMenu(false)
                                   logout()
                                 }}
-                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-coral/8 transition-all flex items-center gap-2 group"
+                                className="w-full text-left px-3 py-2 md:px-4 md:py-3 rounded-lg hover:bg-coral/8 transition-all flex items-center gap-2 md:gap-3 group"
                               >
-                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-coral/15 to-red-100 flex items-center justify-center flex-shrink-0">
-                                  <LogOut className="w-3 h-3 text-coral/70" />
+                                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-coral/15 to-red-100 flex items-center justify-center flex-shrink-0">
+                                  <LogOut className="w-3 h-3 md:w-4 md:h-4 text-coral/70" />
                                 </div>
                                 <span className="font-sans text-sm text-coral/75 group-hover:text-coral font-medium">Sign out</span>
                               </button>
