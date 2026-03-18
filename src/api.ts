@@ -62,8 +62,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         err.status = res.status
         Object.assign(err, body)
 
-        // On 401, clear token and notify store (unless this IS the refresh call)
-        if (res.status === 401 && path !== '/auth/refresh' && path !== '/auth/me') {
+        // On 401, clear token and notify store (unless this IS the refresh call or a PIN/OTP verification)
+        const isVaultEndpoint = path === '/auth/vault-code/verify' || path === '/auth/vault-code/reset' || path === '/auth/vault-code/verify-otp'
+        if (res.status === 401 && path !== '/auth/refresh' && path !== '/auth/me' && !isVaultEndpoint) {
           clearToken()
           onUnauthorized?.()
           throw err
@@ -250,4 +251,13 @@ export const api = {
 
   updateHiddenSpaces: (spaceIds: string[]) =>
     request<{ success: boolean; hiddenSpaceIds: string[] }>('/auth/hidden-spaces', { method: 'PATCH', body: JSON.stringify({ spaceIds }) }),
+
+  forgotVaultCode: () =>
+    request<{ success: boolean }>('/auth/vault-code/forgot', { method: 'POST' }),
+
+  verifyVaultOtp: (otpCode: string) =>
+    request<{ success: boolean }>('/auth/vault-code/verify-otp', { method: 'POST', body: JSON.stringify({ otpCode }) }),
+
+  resetVaultCode: (otpCode: string, newCode: string) =>
+    request<{ success: boolean }>('/auth/vault-code/reset', { method: 'POST', body: JSON.stringify({ otpCode, newCode }) }),
 }

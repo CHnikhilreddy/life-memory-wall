@@ -23,6 +23,9 @@ interface AppState {
   changeVaultCode: (currentCode: string, newCode: string) => Promise<void>
   verifyVaultCode: (code: string) => Promise<boolean>
   updateHiddenSpaces: (spaceIds: string[]) => Promise<void>
+  forgotVaultCode: () => Promise<void>
+  verifyVaultOtp: (otpCode: string) => Promise<void>
+  resetVaultCode: (otpCode: string, newCode: string) => Promise<void>
 
   init: () => Promise<void>
   login: (credentials?: { email?: string; phone?: string; name?: string; password?: string }) => Promise<void>
@@ -430,8 +433,17 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setVaultCode: async (code) => {
-    await api.setVaultCode(code)
-    set({ hasVaultCode: true })
+    try {
+      await api.setVaultCode(code)
+      set({ hasVaultCode: true })
+    } catch (err: any) {
+      if (err.status === 409) {
+        // Vault code already exists — sync local state and surface a clear error
+        set({ hasVaultCode: true })
+        throw new Error('A vault code is already set. Please use "Change secrecy code" to update it.')
+      }
+      throw err
+    }
   },
 
   changeVaultCode: async (currentCode, newCode) => {
@@ -450,6 +462,19 @@ export const useStore = create<AppState>((set, get) => ({
   updateHiddenSpaces: async (spaceIds) => {
     await api.updateHiddenSpaces(spaceIds)
     set({ hiddenSpaceIds: spaceIds })
+  },
+
+  forgotVaultCode: async () => {
+    await api.forgotVaultCode()
+  },
+
+  verifyVaultOtp: async (otpCode) => {
+    await api.verifyVaultOtp(otpCode)
+  },
+
+  resetVaultCode: async (otpCode, newCode) => {
+    await api.resetVaultCode(otpCode, newCode)
+    set({ hasVaultCode: true })
   },
 
   updateMemberPermission: async (spaceId, userId, permission) => {
