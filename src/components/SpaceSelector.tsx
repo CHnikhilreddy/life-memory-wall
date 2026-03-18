@@ -24,7 +24,7 @@ const defaultSpaceColors = [
   'from-lime-200/60 to-emerald-200/60',
 ]
 
-type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password' | 'join' | 'unlock-vault' | 'set-secret-code' | 'profile' | 'manage-spaces'
+type Modal = 'none' | 'create' | 'members' | 'edit-space' | 'edit-profile' | 'change-password' | 'join' | 'unlock-vault' | 'set-secret-code' | 'forgot-vault-code' | 'profile' | 'manage-spaces'
 
 const spacePageHeadings = [
   'Where do you want to go today?',
@@ -44,7 +44,7 @@ const spacePageSubheadings = [
 ]
 
 export default function SpaceSelector() {
-  const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, leaveSpace, removeMember, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite, hiddenSpaceIds: storeHiddenSpaceIds, hasVaultCode, setVaultCode: storeSetVaultCode, changeVaultCode: storeChangeVaultCode, verifyVaultCode: storeVerifyVaultCode, updateHiddenSpaces: storeUpdateHiddenSpaces } = useStore()
+  const { getVisibleSpaces, setActiveSpace, addSpace, updateSpace, deleteSpace, leaveSpace, removeMember, logout, currentUser, spaces, loading, pendingInvites, acceptSpaceInvite, rejectSpaceInvite, hiddenSpaceIds: storeHiddenSpaceIds, hasVaultCode, setVaultCode: storeSetVaultCode, changeVaultCode: storeChangeVaultCode, verifyVaultCode: storeVerifyVaultCode, updateHiddenSpaces: storeUpdateHiddenSpaces, forgotVaultCode: storeForgotVaultCode, verifyVaultOtp: storeVerifyVaultOtp, resetVaultCode: storeResetVaultCode } = useStore()
   const allSpaces = getVisibleSpaces()
   const totalJoinRequests = spaces.reduce((sum, s) => s.createdBy === currentUser?.id ? sum + (s.joinRequests?.length || 0) : sum, 0)
   const totalNotifications = pendingInvites.length + totalJoinRequests
@@ -159,6 +159,33 @@ export default function SpaceSelector() {
   const [vaultOpen, setVaultOpen] = useState(false)
   const [vaultPinInput, setVaultPinInput] = useState('')
   const [vaultPinError, setVaultPinError] = useState('')
+  const [vaultPinPurpose, setVaultPinPurpose] = useState<'unlock' | 'hide'>('unlock')
+
+  // Vault attempt tracking (localStorage keys)
+  const VAULT_ATTEMPTS_KEY = 'vaultHideAttempts'
+  const VAULT_LOCKOUT_KEY = 'vaultHideLockoutUntil'
+  const getVaultAttempts = () => parseInt(localStorage.getItem(VAULT_ATTEMPTS_KEY) || '0', 10)
+  const getVaultLockoutUntil = () => localStorage.getItem(VAULT_LOCKOUT_KEY)
+  const isVaultLockedOut = () => { const t = getVaultLockoutUntil(); return !!t && new Date() < new Date(t) }
+  const getRemainingAttempts = () => Math.max(0, 3 - getVaultAttempts())
+  const recordFailedHideAttempt = () => {
+    const attempts = getVaultAttempts() + 1
+    localStorage.setItem(VAULT_ATTEMPTS_KEY, String(attempts))
+    if (attempts >= 3) localStorage.setItem(VAULT_LOCKOUT_KEY, new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString())
+  }
+  const clearVaultAttempts = () => { localStorage.removeItem(VAULT_ATTEMPTS_KEY); localStorage.removeItem(VAULT_LOCKOUT_KEY) }
+  const getLockoutHoursRemaining = () => {
+    const t = getVaultLockoutUntil()
+    if (!t) return 0
+    return Math.ceil((new Date(t).getTime() - Date.now()) / (1000 * 60 * 60))
+  }
+  const [forgotVaultStep, setForgotVaultStep] = useState<'send' | 'verify' | 'reset'>('send')
+  const [forgotVaultOtp, setForgotVaultOtp] = useState('')
+  const [forgotVaultNewPin, setForgotVaultNewPin] = useState('')
+  const [forgotVaultConfirmPin, setForgotVaultConfirmPin] = useState('')
+  const [forgotVaultError, setForgotVaultError] = useState('')
+  const [forgotVaultSuccess, setForgotVaultSuccess] = useState(false)
+  const [forgotVaultLoading, setForgotVaultLoading] = useState(false)
   const [newSecretCode, setNewSecretCode] = useState('')
   const [confirmSecretCode, setConfirmSecretCode] = useState('')
   const [currentSecretCodeInput, setCurrentSecretCodeInput] = useState('')
@@ -380,12 +407,20 @@ export default function SpaceSelector() {
     // Vault / hide state reset
     setVaultPinInput('')
     setVaultPinError('')
+    setVaultPinPurpose('unlock')
     setNewSecretCode('')
     setConfirmSecretCode('')
     setCurrentSecretCodeInput('')
     setSecretCodeError('')
     setSecretCodeSuccess(false)
     if (!pendingHideAfterCode) setPendingHideAfterCode(false)
+    setForgotVaultStep('send')
+    setForgotVaultOtp('')
+    setForgotVaultNewPin('')
+    setForgotVaultConfirmPin('')
+    setForgotVaultError('')
+    setForgotVaultSuccess(false)
+    setForgotVaultLoading(false)
   }
 
   if (loading) {
@@ -1353,9 +1388,18 @@ export default function SpaceSelector() {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedToHide(new Set(hiddenSpaceIds))
-                        setHideSelectMode(true)
-                        closeModal()
+                        if (!hasVaultCode) {
+                          setPendingHideAfterCode(true)
+                          setModal('set-secret-code')
+                        } else if (isVaultLockedOut()) {
+                          setVaultPinPurpose('hide')
+                          setVaultPinError(`Too many failed attempts. Try again in ${getLockoutHoursRemaining()} hour(s).`)
+                          setModal('unlock-vault')
+                        } else {
+                          setVaultPinPurpose('hide')
+                          setSelectedToHide(new Set(hiddenSpaceIds))
+                          setModal('unlock-vault')
+                        }
                       }}
                       className="group flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-slate-50/80 to-gray-100/80 border border-slate-200/40 hover:border-slate-300/60 hover:shadow-lg hover:scale-[1.02] transition-all"
                     >
@@ -1588,6 +1632,12 @@ export default function SpaceSelector() {
                               />
                             ))}
                           </div>
+                          <button
+                            onClick={() => { setForgotVaultStep('send'); setModal('forgot-vault-code') }}
+                            className="w-full text-center text-sm text-gold/70 hover:text-gold transition-all font-sans mt-2"
+                          >
+                            Forgot code?
+                          </button>
                         </div>
                       )}
                       <div>
@@ -2121,7 +2171,9 @@ export default function SpaceSelector() {
                       <Lock className="w-7 h-7 text-gold/80" />
                     </div>
                     <h2 className="font-serif text-2xl text-warmDark">Secret Vault</h2>
-                    <p className="font-handwriting text-lg text-warmDark/60 mt-1">Enter your 4-digit secrecy code</p>
+                    <p className="font-handwriting text-lg text-warmDark/60 mt-1">
+                      {vaultPinPurpose === 'hide' ? 'Verify your code to manage hidden spaces' : 'Enter your 4-digit secrecy code'}
+                    </p>
                   </div>
                   <div className="flex justify-center gap-3 mb-4">
                     {[0, 1, 2, 3].map((idx) => (
@@ -2131,8 +2183,10 @@ export default function SpaceSelector() {
                         type="password"
                         inputMode="numeric"
                         maxLength={1}
+                        disabled={isVaultLockedOut() && vaultPinPurpose === 'hide'}
                         value={vaultPinInput[idx] || ''}
                         onChange={(e) => {
+                          if (isVaultLockedOut() && vaultPinPurpose === 'hide') return
                           const val = e.target.value.replace(/\D/, '')
                           if (!val) return
                           const arr = (vaultPinInput + '    ').split('').slice(0, 4)
@@ -2144,10 +2198,26 @@ export default function SpaceSelector() {
                           if (next.length === 4) {
                             storeVerifyVaultCode(next).then((ok) => {
                               if (ok) {
-                                setVaultOpen(true)
-                                closeModal()
+                                if (vaultPinPurpose === 'hide') {
+                                  clearVaultAttempts()
+                                  closeModal()
+                                  setHideSelectMode(true)
+                                } else {
+                                  setVaultOpen(true)
+                                  closeModal()
+                                }
                               } else {
-                                setVaultPinError('Incorrect code. Try again.')
+                                if (vaultPinPurpose === 'hide') {
+                                  recordFailedHideAttempt()
+                                  if (isVaultLockedOut()) {
+                                    setVaultPinError(`Too many failed attempts. Try again in ${getLockoutHoursRemaining()} hour(s).`)
+                                  } else {
+                                    const remaining = getRemainingAttempts()
+                                    setVaultPinError(`Incorrect code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`)
+                                  }
+                                } else {
+                                  setVaultPinError('Incorrect code. Try again.')
+                                }
                                 setVaultPinInput('')
                                 document.getElementById('vault-pin-0')?.focus()
                               }
@@ -2170,7 +2240,7 @@ export default function SpaceSelector() {
                           }
                         }}
                         autoFocus={idx === 0}
-                        className="w-14 h-14 rounded-2xl bg-white/60 border-2 border-warmMid/20 text-center text-xl font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                        className="w-14 h-14 rounded-2xl bg-white/60 border-2 border-warmMid/20 text-center text-xl font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     ))}
                   </div>
@@ -2180,7 +2250,261 @@ export default function SpaceSelector() {
                       {vaultPinError}
                     </motion.p>
                   )}
+                  <button
+                    onClick={() => { setForgotVaultStep('send'); setModal('forgot-vault-code') }}
+                    className="w-full text-center text-sm text-gold/70 hover:text-gold transition-all font-sans mb-1"
+                  >
+                    Forgot code?
+                  </button>
                   <button onClick={closeModal} className="w-full py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                </>
+              )}
+
+              {/* FORGOT VAULT CODE */}
+              {modal === 'forgot-vault-code' && (
+                <>
+                  <div className="flex flex-col items-center mb-6">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gold/20 to-peach/40 flex items-center justify-center mb-4 shadow-inner">
+                      <Lock className="w-7 h-7 text-gold/80" />
+                    </div>
+                    <h2 className="font-serif text-2xl text-warmDark">
+                      {forgotVaultStep === 'send' && 'Reset Vault Code'}
+                      {forgotVaultStep === 'verify' && 'Enter OTP'}
+                      {forgotVaultStep === 'reset' && 'Set New Code'}
+                    </h2>
+                    <p className="font-sans text-sm text-warmDark/60 mt-1 text-center">
+                      {forgotVaultStep === 'send' && `We'll send a reset code to ${currentUser?.email ? currentUser.email.replace(/(.{2}).*(@.*)/, '$1****$2') : 'your email'}`}
+                      {forgotVaultStep === 'verify' && 'Enter the 6-digit code sent to your email'}
+                      {forgotVaultStep === 'reset' && 'Choose a new 4-digit secret code'}
+                    </p>
+                  </div>
+
+                  {/* Step 1: Send OTP */}
+                  {forgotVaultStep === 'send' && (
+                    <div className="flex flex-col gap-3">
+                      {forgotVaultError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center">
+                          {forgotVaultError}
+                        </motion.p>
+                      )}
+                      <button
+                        onClick={async () => {
+                          setForgotVaultLoading(true)
+                          setForgotVaultError('')
+                          try {
+                            await storeForgotVaultCode()
+                            setForgotVaultStep('verify')
+                          } catch (err: any) {
+                            setForgotVaultError(err.message || 'Failed to send code. Try again.')
+                          } finally {
+                            setForgotVaultLoading(false)
+                          }
+                        }}
+                        disabled={forgotVaultLoading}
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm"
+                      >
+                        {forgotVaultLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send reset code'}
+                      </button>
+                      <button onClick={closeModal} className="w-full py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                    </div>
+                  )}
+
+                  {/* Step 2: Verify OTP */}
+                  {forgotVaultStep === 'verify' && (
+                    <div className="flex flex-col gap-3">
+                      <div className="flex justify-center gap-2">
+                        {[0, 1, 2, 3, 4, 5].map((idx) => (
+                          <input
+                            key={idx}
+                            id={`forgot-otp-${idx}`}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={forgotVaultOtp[idx] || ''}
+                            autoFocus={idx === 0}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/, '')
+                              if (!val) return
+                              const arr = (forgotVaultOtp + '      ').split('').slice(0, 6)
+                              arr[idx] = val
+                              setForgotVaultOtp(arr.join('').trimEnd())
+                              setForgotVaultError('')
+                              if (idx < 5) document.getElementById(`forgot-otp-${idx + 1}`)?.focus()
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Backspace') {
+                                e.preventDefault()
+                                const arr = (forgotVaultOtp + '      ').split('').slice(0, 6)
+                                if (arr[idx]?.trim()) { arr[idx] = ' '; setForgotVaultOtp(arr.join('').trimEnd()) }
+                                else if (idx > 0) { arr[idx - 1] = ' '; setForgotVaultOtp(arr.join('').trimEnd()); document.getElementById(`forgot-otp-${idx - 1}`)?.focus() }
+                              }
+                            }}
+                            className="w-10 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                          />
+                        ))}
+                      </div>
+                      {forgotVaultError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center">
+                          {forgotVaultError}
+                        </motion.p>
+                      )}
+                      <button
+                        onClick={async () => {
+                          const cleanOtp = forgotVaultOtp.replace(/\s/g, '')
+                          if (cleanOtp.length !== 6) { setForgotVaultError('Enter the full 6-digit code'); return }
+                          setForgotVaultLoading(true)
+                          setForgotVaultError('')
+                          try {
+                            await storeVerifyVaultOtp(cleanOtp)
+                            setForgotVaultStep('reset')
+                          } catch (err: any) {
+                            setForgotVaultError(err.message || 'Invalid code. Please check your email.')
+                          } finally {
+                            setForgotVaultLoading(false)
+                          }
+                        }}
+                        disabled={forgotVaultLoading || forgotVaultOtp.replace(/\s/g, '').length < 6}
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm"
+                      >
+                        Verify code
+                      </button>
+                      <button
+                        onClick={async () => {
+                          setForgotVaultLoading(true)
+                          setForgotVaultError('')
+                          try {
+                            await storeForgotVaultCode()
+                            setForgotVaultOtp('')
+                          } catch (err: any) {
+                            setForgotVaultError(err.message || 'Failed to resend. Try again.')
+                          } finally {
+                            setForgotVaultLoading(false)
+                          }
+                        }}
+                        className="w-full text-center text-sm text-gold/70 hover:text-gold transition-all font-sans"
+                      >
+                        Resend code
+                      </button>
+                      <button onClick={closeModal} className="w-full py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                    </div>
+                  )}
+
+                  {/* Step 3: Set new PIN */}
+                  {forgotVaultStep === 'reset' && (
+                    <div className="flex flex-col gap-4">
+                      <div>
+                        <p className="text-xs font-sans text-warmDark/50 mb-2 text-center">New code</p>
+                        <div className="flex justify-center gap-3">
+                          {[0, 1, 2, 3].map((idx) => (
+                            <input
+                              key={idx}
+                              id={`forgot-new-${idx}`}
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={1}
+                              autoFocus={idx === 0}
+                              value={forgotVaultNewPin[idx] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/, '')
+                                if (!val) return
+                                const arr = (forgotVaultNewPin + '    ').split('').slice(0, 4)
+                                arr[idx] = val
+                                setForgotVaultNewPin(arr.join('').trimEnd())
+                                setForgotVaultError('')
+                                if (idx < 3) document.getElementById(`forgot-new-${idx + 1}`)?.focus()
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Backspace') {
+                                  e.preventDefault()
+                                  const arr = (forgotVaultNewPin + '    ').split('').slice(0, 4)
+                                  if (arr[idx]?.trim()) { arr[idx] = ' '; setForgotVaultNewPin(arr.join('').trimEnd()) }
+                                  else if (idx > 0) { arr[idx - 1] = ' '; setForgotVaultNewPin(arr.join('').trimEnd()); document.getElementById(`forgot-new-${idx - 1}`)?.focus() }
+                                }
+                              }}
+                              className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-sans text-warmDark/50 mb-2 text-center">Confirm new code</p>
+                        <div className="flex justify-center gap-3">
+                          {[0, 1, 2, 3].map((idx) => (
+                            <input
+                              key={idx}
+                              id={`forgot-conf-${idx}`}
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={1}
+                              value={forgotVaultConfirmPin[idx] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/, '')
+                                if (!val) return
+                                const arr = (forgotVaultConfirmPin + '    ').split('').slice(0, 4)
+                                arr[idx] = val
+                                setForgotVaultConfirmPin(arr.join('').trimEnd())
+                                setForgotVaultError('')
+                                if (idx < 3) document.getElementById(`forgot-conf-${idx + 1}`)?.focus()
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Backspace') {
+                                  e.preventDefault()
+                                  const arr = (forgotVaultConfirmPin + '    ').split('').slice(0, 4)
+                                  if (arr[idx]?.trim()) { arr[idx] = ' '; setForgotVaultConfirmPin(arr.join('').trimEnd()) }
+                                  else if (idx > 0) { arr[idx - 1] = ' '; setForgotVaultConfirmPin(arr.join('').trimEnd()); document.getElementById(`forgot-conf-${idx - 1}`)?.focus() }
+                                }
+                              }}
+                              className="w-12 h-12 rounded-xl bg-white/60 border-2 border-warmMid/20 text-center text-lg font-bold text-warmDark outline-none focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {forgotVaultError && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-coral font-sans bg-coral/10 rounded-xl px-4 py-2 text-center">
+                          {forgotVaultError}
+                        </motion.p>
+                      )}
+                      {forgotVaultSuccess && (
+                        <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          className="text-sm text-teal font-sans bg-teal/10 rounded-xl px-4 py-2 flex items-center justify-center gap-2">
+                          <Check className="w-4 h-4" /> Code updated!
+                        </motion.p>
+                      )}
+                      <div className="flex gap-3">
+                        <button onClick={closeModal} className="flex-1 py-3 rounded-xl text-warmDark/70 hover:bg-white/30 transition-all font-sans text-sm">Cancel</button>
+                        <button
+                          onClick={async () => {
+                            const cleanNew = forgotVaultNewPin.replace(/\s/g, '')
+                            const cleanConfirm = forgotVaultConfirmPin.replace(/\s/g, '')
+                            const cleanOtp = forgotVaultOtp.replace(/\s/g, '')
+                            if (cleanNew.length !== 4) { setForgotVaultError('New code must be exactly 4 digits'); return }
+                            if (cleanNew !== cleanConfirm) { setForgotVaultError('Codes do not match'); return }
+                            setForgotVaultLoading(true)
+                            setForgotVaultError('')
+                            try {
+                              await storeResetVaultCode(cleanOtp, cleanNew)
+                              setForgotVaultSuccess(true)
+                              setTimeout(() => { closeModal(); setModal('unlock-vault') }, 1200)
+                            } catch (err: any) {
+                              setForgotVaultError(err.message || 'Failed to reset code. Try again.')
+                              if (err.message?.includes('expired') || err.message?.includes('Invalid')) {
+                                setForgotVaultStep('verify')
+                              }
+                            } finally {
+                              setForgotVaultLoading(false)
+                            }
+                          }}
+                          disabled={forgotVaultLoading || forgotVaultSuccess}
+                          className="flex-1 py-3 rounded-xl bg-gradient-to-r from-gold/80 to-coral/80 text-white font-medium disabled:opacity-60 flex items-center justify-center gap-2 font-sans text-sm"
+                        >
+                          {forgotVaultLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save new code'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -2344,8 +2668,8 @@ export default function SpaceSelector() {
                               setPendingHideAfterCode(false)
                             }
                             setTimeout(() => closeModal(), 1200)
-                          } catch {
-                            setSecretCodeError('Failed to save code. Please try again.')
+                          } catch (err: any) {
+                            setSecretCodeError(err.message || 'Failed to save code. Please try again.')
                           }
                         }}
                         disabled={secretCodeSuccess}
